@@ -1,59 +1,112 @@
-var express = require('express');
-var path = require('path');
-var favicon = require('static-favicon');
-var logger = require('morgan');
-var cookieParser = require('cookie-parser');
-var bodyParser = require('body-parser');
+var net = require('net');
 
-var routes = require('./routes/index');
-var users = require('./routes/users');
+var HOST = '127.0.0.1';
+var PORT = 8484;
 
-var app = express();
+var server = net.createServer();
+server.listen(PORT, HOST);
 
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
+server.on('connection', function(sock) {
 
-app.use(favicon());
-app.use(logger('dev'));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded());
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', routes);
-app.use('/users', users);
+    // handle first connection stuff (if this is called multiple times I'll need to add more logic)
 
-/// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-    var err = new Error('Not Found');
-    err.status = 404;
-    next(err);
-});
+    console.log(sock.remoteAddress +':'+ sock.remotePort+' has connected');
 
-/// error handlers
+    sock.on('data', function(data) {
 
-// development error handler
-// will print stacktrace
-if (app.get('env') === 'development') {
-    app.use(function(err, req, res, next) {
-        res.status(err.status || 500);
-        res.render('error', {
-            message: err.message,
-            error: err
-        });
+        console.log('Data received from' + sock.remoteAddress + ': ' + data);
+
+        // write back to the socket
+        //sock.write();
     });
-}
 
-// production error handler
-// no stacktraces leaked to user
-app.use(function(err, req, res, next) {
-    res.status(err.status || 500);
-    res.render('error', {
-        message: err.message,
-        error: {}
+    sock.on('close', function(data) {
+        console.log(sock.remoteAddress +':'+ sock.remotePort+' has disconnected');
     });
-});
 
 
-module.exports = app;
+}).listen(PORT, HOST);
+console.log('Server hosted on ' + server.address().address +':'+ server.address().port);
+
+//var express = require('express');
+//
+//var app = express();
+//app.set('port', 8484);
+//
+//app.listen(app.get('port'), function() {
+//    console.log("Server listening on port " + this.address().port);
+//});
+//
+// Socket.io server listens to our app
+//var io = require('socket.io').listen(app);
+//io.on('connection', function(socket){
+//    console.log("User: "+socket.toString()+" has connected");
+//});
+
+
+/*
+ // Load the TCP Library
+ net = require('net');
+
+ var clients = [];
+ var port = "8484"
+
+ net.createServer(function (socket) {
+ // identifies connected client
+ socket.name = socket.remoteAddress + ":" + socket.remotePort;
+ console.log(socket.name +" has connected to app.js");
+ //
+ //    // Put this new client in the list
+ //    clients.push(socket);
+ //
+ //    // Send a nice welcome message and announce
+ //    socket.write("Welcome " + socket.name + "\n");
+ //    broadcast(socket.name + " joined the chat\n", socket);
+
+ // Handle incoming messages from clients.
+ socket.on('data', function (data) {
+ console.log("'data' type of Data: "+data+" from "+socket.name);
+ //  broadcast(socket.name + "> " + data, socket);
+ // console.log("socket.name + "> " + data, socket");
+ });
+ // Handle incoming messages from clients.
+ socket.on("data", function (data) {
+ console.log("'data' type of Data: "+data+" from "+socket.name);
+ //  broadcast(socket.name + "> " + data, socket);
+ // console.log("socket.name + "> " + data, socket");
+ });
+
+ socket.on('', function (data) {
+ console.log(" '' type of Data: "+data+" from "+socket.name);
+ //  broadcast(socket.name + "> " + data, socket);
+ // console.log("socket.name + "> " + data, socket");
+ });
+
+
+ // Remove the client from the list when it leaves
+ socket.on('end', function () {
+ console.log(socket.name +" has disconnected");
+ //        clients.splice(clients.indexOf(socket), 1);
+ //        broadcast(socket.name + " left the chat.\n");
+ });
+
+ // Send a message to all clients
+ function broadcast(message, sender) {
+ //        clients.forEach(function (client) {
+ //            // Don't want to send it to sender
+ //            if (client === sender) return;
+ //            client.write(message);
+ //        });
+ //        // Log it to the server output too
+ process.stdout.write(message)
+ }
+
+ }).listen(port);
+
+ // Put a friendly message on the terminal of the server.
+ console.log("Server running on port "+port+"\n");
+
+ */
+
+
