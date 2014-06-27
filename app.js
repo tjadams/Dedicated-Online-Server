@@ -3,6 +3,7 @@ var net = require('net');
 // import classes to be used
 var MapleClient = require('./src/MapleClient.js');
 var MapleAESOFB = require('./src/MapleAESOFB.js');
+var MaplePacketCreator = require('./src/MaplePacketCreator.js');
 
 var HOST = '127.0.0.1';
 var PORT = 8484;
@@ -57,31 +58,37 @@ function firstConnect(sock){
     var ivRecv = new Buffer([70, 114, 122, 82]);
     var ivSend = new Buffer([82, 48, 120, 115]);
 
-    // TODO randomize part of the initialization vector
-    //ivRecv[3] = Math.random() * 255;
-    //ivSend[3] = Math.random() * 255;
+    ivRecv[3] = Math.random() * 255;
+    ivSend[3] = Math.random() * 255;
 
-    // TODO investigate (short) cast
     var sendCypher = new MapleAESOFB(key, ivSend, MAPLEVERSION , true);
-    console.log("sendCypher toString: "+sendCypher);
+//    console.log("sendCypher toString: "+sendCypher);
     var recvCypher = new MapleAESOFB(key, ivRecv, MAPLEVERSION, false);
-    console.log("recvCypher toString: "+recvCypher);
+//    console.log("recvCypher toString: "+recvCypher);
+
+// TODO: verify my cipher in each of the MapleAESOFB objects is correct
 
     var client = new MapleClient(sendCypher, recvCypher, sock);
-    //console.log("client toString: "+client);
+    console.log("client toString: "+client);
 
     // initialize clients to have login server attributes
     client.setWorld(-1);
     client.setChannel(-1);
 
-    //console.log("World: "+client.world +"  Channel:"+ client.channel);
+    // TODO finish writing the hello packet
 
-    //TODO: after I have ran sample code and everything is equal up to this point,
-    //TODO: write these next two lines and then compare again before actually sending
+    write(sock, MaplePacketCreator.getHello(MAPLEVERSION, ivSend, ivRecv));
 
-//    sock.write(MaplePacketCreator.getHello(MAPLEVERSION, ivSend, ivRecv));
-    // TODO create a method that encodes the sent bytes
+    // NOTE: I am not setting attributes to the socket yet
 //    sock.setAttribute(MapleClient.CLIENT_KEY, client);
-
 }
+
+//encode the sent bytes and then writes them
+function write(sock, packets){
+
+    // TODO do some maple packet encoding so the client can recognize these packets
+    packets manipulated;
+    sock.write(packets);
+}
+
 
