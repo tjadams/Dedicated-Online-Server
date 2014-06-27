@@ -57,14 +57,14 @@ function firstConnect(sock){
     var ivRecv = new Buffer([70, 114, 122, 82]);
     var ivSend = new Buffer([82, 48, 120, 115]);
 
-    // randomize part of the initialization vector
-    ivRecv[3] = Math.random() * 255;
-    ivSend[3] = Math.random() * 255;
+    // TODO randomize part of the initialization vector
+    //ivRecv[3] = Math.random() * 255;
+    //ivSend[3] = Math.random() * 255;
 
     // TODO investigate (short) cast
-    var sendCypher = new MapleAESOFB(key, ivSend, (0xFFFF - MAPLEVERSION));
+    var sendCypher = new MapleAESOFB(key, ivSend, MAPLEVERSION , true);
     console.log("sendCypher toString: "+sendCypher);
-    var recvCypher = new MapleAESOFB(key, ivRecv, (MAPLEVERSION));
+    var recvCypher = new MapleAESOFB(key, ivRecv, MAPLEVERSION, false);
     console.log("recvCypher toString: "+recvCypher);
 
     var client = new MapleClient(sendCypher, recvCypher, sock);
