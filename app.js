@@ -9,7 +9,9 @@ var HOST = '127.0.0.1';
 var PORT = 8484;
 var MAPLEVERSION = 83;
 
+/*
 var server = net.createServer();
+
 server.listen(PORT, HOST);
 
 
@@ -38,8 +40,8 @@ server.on('connection', function(sock) {
 
 }).listen(PORT, HOST);
 console.log('Server hosted on ' + HOST +':'+ PORT);
-
-console.log("Testing firstConnect: \n" );
+*/
+console.log("Checking helloPacket: \n" );
 firstConnect("this is a string instead of a sock");
 
 
@@ -58,8 +60,8 @@ function firstConnect(sock){
     var ivRecv = new Buffer([70, 114, 122, 82]);
     var ivSend = new Buffer([82, 48, 120, 115]);
 
-    ivRecv[3] = Math.random() * 255;
-    ivSend[3] = Math.random() * 255;
+//    ivRecv[3] = Math.random() * 255;
+//    ivSend[3] = Math.random() * 255;
 
     var sendCypher = new MapleAESOFB(key, ivSend, MAPLEVERSION , true);
 //    console.log("sendCypher toString: "+sendCypher);
@@ -69,7 +71,7 @@ function firstConnect(sock){
 // TODO: verify my cipher in each of the MapleAESOFB objects is correct
 
     var client = new MapleClient(sendCypher, recvCypher, sock);
-    console.log("client toString: "+client);
+    //console.log("client toString: "+client);
 
     // initialize clients to have login server attributes
     client.setWorld(-1);
@@ -78,6 +80,12 @@ function firstConnect(sock){
     // TODO check the hello packet
 
     var unencryptedPackets = MaplePacketCreator.getHello(MAPLEVERSION, ivSend, ivRecv);
+
+//    console.log("unencrypted packets: ");
+    for(var i=0; i<unencryptedPackets.length; i++) {
+//        console.log(unencryptedPackets[i]);
+    }
+
     write(sock, unencryptedPackets);
 
     // NOTE: I am not setting attributes to the socket yet
@@ -90,7 +98,7 @@ function write(sock, packets){
     // TODO do some maple packet encoding so the client can recognize these packets
     //packets manipulated;
 
-    sock.write(packets);
+   // sock.write(packets);
 }
 
 
