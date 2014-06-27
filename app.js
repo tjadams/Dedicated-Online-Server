@@ -75,9 +75,10 @@ function firstConnect(sock){
     client.setWorld(-1);
     client.setChannel(-1);
 
-    // TODO finish writing the hello packet
+    // TODO check the hello packet
 
-    write(sock, MaplePacketCreator.getHello(MAPLEVERSION, ivSend, ivRecv));
+    var unencryptedPackets = MaplePacketCreator.getHello(MAPLEVERSION, ivSend, ivRecv);
+    write(sock, unencryptedPackets);
 
     // NOTE: I am not setting attributes to the socket yet
 //    sock.setAttribute(MapleClient.CLIENT_KEY, client);
@@ -87,7 +88,8 @@ function firstConnect(sock){
 function write(sock, packets){
 
     // TODO do some maple packet encoding so the client can recognize these packets
-    packets manipulated;
+    //packets manipulated;
+
     sock.write(packets);
 }
 
