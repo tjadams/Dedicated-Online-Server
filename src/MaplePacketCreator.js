@@ -2,6 +2,8 @@
  * Created by Tyler Adams on 26/06/2014.
  */
 
+
+// NOTE: buffer.write() was giving me incorrect values. Buffer.concat() works better.
 function MaplePacketCreator()  {
 
 
@@ -10,11 +12,18 @@ function MaplePacketCreator()  {
 var getHello = function (MAPLEVERSION, ivSend, ivRecv) {
     // create a buffer that will have a size of 8 bytes
 //    var buffer = new Buffer(16, "ucs2");
-        var buffer = new Buffer(16);
-//    buffer = writeShort(0x0E, buffer);
+//
 
-    // TODO investigate buffer.write()
-    console.log("short & 0xFF: " + ((0x0E) & 0xFF));
+    // initialize an empty buffer that I can append to
+        var buffer = new Buffer(0);
+    buffer = writeShort(0x0E, buffer);
+
+//    for(var i=0; i<buffer.length; i++){
+//             console.log(buffer[i]);
+//    }
+
+
+//    console.log("short & 0xFF: " + ((0x0E) & 0xFF));
 
 //    logBuffer("writeShort",buffer);
     buffer = writeShort(MAPLEVERSION, buffer);
@@ -50,18 +59,27 @@ var getHello = function (MAPLEVERSION, ivSend, ivRecv) {
 function writeShort(short, buffer){
 //    buffer.write("" + (short & 0xFF), "ucs2");
 //    buffer.write(""+ ((short >>> 8)& 0xFF), "ucs2");
-var x = short & 0xFF;
-    var y= "";
-    y = x.concat(y);
-    buffer.write(y);
 
+
+//var x = short & 0xFF;
+//    var y= "";
+//    y = x.concat(y);
+//    buffer.write(y);
+
+    //   x = ((short >>> 8)& 0xFF);
+//   y = "";
+//    y = x.concat(y);
+//    buffer.write(y);
+
+                  var temp = new Buffer(2);
+    temp[0] = "" + (short & 0xFF);
+    temp[1] = "" + ((short >>> 8)& 0xFF);
 //    buffer.write("" + (short & 0xFF));
-
-   x = ((short >>> 8)& 0xFF);
-   y = "";
-    y = x.concat(y);
-    buffer.write(y);
 //    buffer.write(""+ ((short >>> 8)& 0xFF));
+
+    // concatonate to the end of the string
+     buffer = Buffer.concat([buffer,temp]);
+
     return buffer;
 //    this.buffer = buffer;
 };
@@ -69,7 +87,14 @@ var x = short & 0xFF;
 function writeArray(byteArray, buffer){
     for(var i=0; i<byteArray.length; i++)
     {
-        buffer.write(""+byteArray[i]);
+
+        var temp = new Buffer(1);
+        temp[0] = "" + (byteArray[i]);
+
+        // concatonate to the end of the string
+        buffer = Buffer.concat([buffer,temp]);
+
+//        buffer.write(""+byteArray[i]);
     }
 
     return buffer;
@@ -85,7 +110,15 @@ function logBuffer (string, buffer){
 function write(byte, buffer){
 //    buffer.write(""+byte, "ucs2");
 
-    buffer.write(""+byte);
+
+    var temp = new Buffer(1);
+    temp[0] = "" + (byte);
+//    buffer.write("" + (short & 0xFF));
+//    buffer.write(""+ ((short >>> 8)& 0xFF));
+
+    // concatonate to the end of the string
+    buffer = Buffer.concat([buffer,temp]);
+//    buffer.write(""+byte);
 
     return buffer;
 //    this.buffer = buffer;

@@ -59,7 +59,7 @@ function firstConnect(sock){
 
     var ivRecv = new Buffer([70, 114, 122, 82]);
     var ivSend = new Buffer([82, 48, 120, 115]);
-
+// TODO uncomment IV randomization
 //    ivRecv[3] = Math.random() * 255;
 //    ivSend[3] = Math.random() * 255;
 
@@ -77,13 +77,11 @@ function firstConnect(sock){
     client.setWorld(-1);
     client.setChannel(-1);
 
-    // TODO check the hello packet
-
     var unencryptedPackets = MaplePacketCreator.getHello(MAPLEVERSION, ivSend, ivRecv);
 
-//    console.log("unencrypted packets: ");
+    console.log("unencrypted packets: ");
     for(var i=0; i<unencryptedPackets.length; i++) {
-//        console.log(unencryptedPackets[i]);
+        console.log(unencryptedPackets[i]);
     }
 
     write(sock, unencryptedPackets);
@@ -98,6 +96,8 @@ function write(sock, packets){
     // TODO do some maple packet encoding so the client can recognize these packets
     //packets manipulated;
 
+
+    // NOTE: packets must be a buffer
    // sock.write(packets);
 }
 
