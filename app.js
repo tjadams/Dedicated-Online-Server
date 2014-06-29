@@ -4,14 +4,27 @@ var net = require('net');
 var MapleClient = require('./src/MapleClient.js');
 var MapleAESOFB = require('./src/MapleAESOFB.js');
 var MaplePacketCreator = require('./src/MaplePacketCreator.js');
+var MaplePacketHandler = require('./src/MaplePacketHandler.js');
 
 var HOST = '127.0.0.1';
 var PORT = 8484;
 var MAPLEVERSION = 83;
 
 ///*
-var server = net.createServer();
 
+
+
+
+// TODO initialize login MaplePacketHandlers
+// loop through all opcodes searching for the largest byte value of the opcode
+// initialize an array object called handlers with size maxOpcodes+1
+
+//register handlers as in reset
+
+// TODO initialize channel MaplePacketHandlers
+
+
+var server = net.createServer();
 server.listen(PORT, HOST);
 
 
@@ -30,6 +43,28 @@ server.on('connection', function(sock) {
         for( var i=0; i< b.length; i++){
                 console.log(b[i]);
         }
+
+        // read the short to determine the packetID/opcode
+        // TODO verify this works
+        var opcode = b[0] + (b[1] << 8);
+        var client = MapleClient.getClient(sock);
+        // get an already initialized handler
+        var packetHandler = MaplePacketHandler.getHandler(opcode);
+        if ((packetHandler != null) && packetHandler.validateState(client)){
+            // handle the packet not including the opcode
+            var packet = b.slice(2, b.length);
+
+            console.log("printing packet");
+            for(var i = 0; i<packet.length; i++){
+                console.log(packet[i]);
+            }
+
+
+            //TODO check to see that packetHandler returns a different handler such that the handler returned has a method called handledPacket
+            packetHandler.handlePacket(packet, client);
+        }
+
+
     });
 
     sock.on('close', function(data) {
