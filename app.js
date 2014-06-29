@@ -9,7 +9,7 @@ var HOST = '127.0.0.1';
 var PORT = 8484;
 var MAPLEVERSION = 83;
 
-/*
+///*
 var server = net.createServer();
 
 server.listen(PORT, HOST);
@@ -18,36 +18,31 @@ server.listen(PORT, HOST);
 // handle first connection stuff (if this is called multiple times I'll need to add more logic)
 server.on('connection', function(sock) {
 
-
-    // handle first connection stuff (if this is called multiple times I'll need to add more logic)
-
+    // handle first connection stuff. If this is called multiple times by the same client I'll need to add more logic)
     console.log(sock.remoteAddress +':'+ sock.remotePort+' has connected');
-
     firstConnect(sock);
 
     sock.on('data', function(data) {
+        var b = new Buffer(0);
+        b = Buffer.concat([b,data]);
+        console.log('Data received from ' + sock.remoteAddress);
 
-        console.log('Data received from' + sock.remoteAddress + ': ' + data);
-
-        // write back to the socket
-        //sock.write();
+        for( var i=0; i< b.length; i++){
+                console.log(b[i]);
+        }
     });
 
     sock.on('close', function(data) {
-        console.log(this.remoteAddress +':'+ this.remotePort+' has disconnected with data: '+data);
+        console.log(sock.remoteAddress +':'+ sock.remotePort+' has disconnected with data: '+data);
     });
 
 
 }).listen(PORT, HOST);
 console.log('Server hosted on ' + HOST +':'+ PORT);
-*/
-console.log("Checking helloPacket: \n" );
-firstConnect("this is a string instead of a sock");
+//*/
 
-
-
-
-
+//console.log("Checking MapleAESOFB toString: \n" );
+//firstConnect("this is a string instead of a sock");
 
 function firstConnect(sock){
 
@@ -59,16 +54,14 @@ function firstConnect(sock){
 
     var ivRecv = new Buffer([70, 114, 122, 82]);
     var ivSend = new Buffer([82, 48, 120, 115]);
-// TODO uncomment IV randomization
-//    ivRecv[3] = Math.random() * 255;
-//    ivSend[3] = Math.random() * 255;
+
+    ivRecv[3] = Math.random() * 255;
+    ivSend[3] = Math.random() * 255;
 
     var sendCypher = new MapleAESOFB(key, ivSend, MAPLEVERSION , true);
-//    console.log("sendCypher toString: "+sendCypher);
+    console.log("sendCypher toString: "+sendCypher);
     var recvCypher = new MapleAESOFB(key, ivRecv, MAPLEVERSION, false);
-//    console.log("recvCypher toString: "+recvCypher);
-
-// TODO: verify my cipher in each of the MapleAESOFB objects is correct
+    console.log("recvCypher toString: "+recvCypher);
 
     var client = new MapleClient(sendCypher, recvCypher, sock);
     //console.log("client toString: "+client);
@@ -79,10 +72,10 @@ function firstConnect(sock){
 
     var unencryptedPackets = MaplePacketCreator.getHello(MAPLEVERSION, ivSend, ivRecv);
 
-    console.log("unencrypted packets: ");
-    for(var i=0; i<unencryptedPackets.length; i++) {
-        console.log(unencryptedPackets[i]);
-    }
+//    console.log("unencrypted packets: ");
+//    for(var i=0; i<unencryptedPackets.length; i++) {
+//        console.log(unencryptedPackets[i]);
+//    }
 
     write(sock, unencryptedPackets);
 
@@ -90,15 +83,11 @@ function firstConnect(sock){
 //    sock.setAttribute(MapleClient.CLIENT_KEY, client);
 }
 
-//encode the sent bytes and then writes them
 function write(sock, packets){
 
-    // TODO do some maple packet encoding so the client can recognize these packets
-    //packets manipulated;
-
-
-    // NOTE: packets must be a buffer
-   // sock.write(packets);
+    // TODO maybe do some packet encoding/decoding later
+   sock.write(packets);
+    console.log("packets have been written");
 }
 
 
