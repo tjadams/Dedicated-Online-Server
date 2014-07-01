@@ -16,5 +16,12 @@ MapleClient.prototype.setChannel = function (channel) {
     this.channel = channel;
 };
 
-// required for "importing this class" as in Java
+exports.getClient = function (sock){
+    if(sock == this.sock){
+        return this;
+        // return MapleClient
+    }
+};
+
+// required for "importing this class and it's prototype methods" as in Java
 module.exports = MapleClient;
