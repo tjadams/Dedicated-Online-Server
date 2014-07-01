@@ -1,10 +1,16 @@
 var net = require('net');
+var mysql = require('mysql');
 
 // import classes to be used
 var MapleClient = require('./src/MapleClient.js');
 var MapleAESOFB = require('./src/MapleAESOFB.js');
 var MaplePacketCreator = require('./src/MaplePacketCreator.js');
-var MaplePacketHandler = require('./src/MaplePacketHandler.js');
+var RecvOpcode = require('./src/RecvOpcode.js');
+
+//var MaplePacketHandler = require('./src/MaplePacketHandler.js'); // TODO add inheritance
+var LoginPasswordHandler = require('./src/handlers/LoginPasswordHandler.js');
+var AcceptToSHandler = require('./src/handlers/AcceptToSHandler.js');
+var AfterLoginHandler = require('./src/handlers/AfterLoginHandler.js');
 
 var HOST = '127.0.0.1';
 var PORT = 8484;
@@ -12,17 +18,75 @@ var MAPLEVERSION = 83;
 
 ///*
 
+// oh noez you know my secrets!
+var connection = mysql.createConnection({
+   host : 'localhost',
+   user: 'root',
+   password: 'root',
+   port: '3306',
+   // creative database name eh?
+   database: 'root'
+});
+
+var isCon = false;
+connection.connect(function(err) {
+    isCon = true;
+    if (err) {
+        console.error('error connecting: ' + err.stack);
+        return;
+    }
+
+    console.log('mySQL database connected as id ' + connection.threadId);
+
+    // TODO this looks like bad practise...
+    connection.query("UPDATE accounts SET loggedin = 0", function(err, results) {
+        if(err){
+            console.error(' back to 2007 we go!!');
+        }else{
+            console.log("UPDATE loggedin results: "+results);
+        }
+    });
+
+    // TODO add extra initial connection stuff
+});
+
+if(isCon){
+    connection.end();
+    isCon = false;
+}else{
+    // TODO break the server somehow
+}
 
 
-
-// TODO initialize login MaplePacketHandlers
 // loop through all opcodes searching for the largest byte value of the opcode
-// initialize an array object called handlers with size maxOpcodes+1
+var maxRecvOp = 0;
 
-//register handlers as in reset
+// get an array of opcodes
+var opcodes = RecvOpcode.getOpcodes();
+
+// this next loop is old school MSPS logic thanks to kevintjuh93 and OdinMS devs
+// it searchs for the opcode with the largest byte value for easy accessing with enums
+for(var i = 0; i < opcodes.length; i++){
+    // opcodes[i] represents the byte value of the opcode
+    if(opcodes[i] > maxRecvOp){
+        maxRecvOp = opcodes[i];
+    }
+}
+
+// initialize an array object called handlers with size maxOpcodes+1 so that we can easily pass in the byte value of the opcode to the array to locate the specific PacketHandler
+var handlers = [maxRecvOp + 1];
+
+handlers[RecvOpcode.opcodes.LOGIN_PASSWORD] = new LoginPasswordHandler();
+handlers[RecvOpcode.opcodes.ACCEPT_TOS] = new AcceptToSHandler();
+handlers[RecvOpcode.opcodes.AFTER_LOGIN] = new AfterLoginHandler();
 
 // TODO initialize channel MaplePacketHandlers
 
+// TODO I need something like a TimerManager to constantly update the MapRespawn
+
+// TODO load skills and items from .wz files
+
+// todo load worlds and channels
 
 var server = net.createServer();
 server.listen(PORT, HOST);
@@ -45,25 +109,43 @@ server.on('connection', function(sock) {
         }
 
         // read the short to determine the packetID/opcode
-        // TODO verify this works
+        // TODO verify these 3 lines work
         var opcode = b[0] + (b[1] << 8);
+        console.log("opcode: "+opcode);
         var client = MapleClient.getClient(sock);
+        console.log("client: "+client);
         // get an already initialized handler
-        var packetHandler = MaplePacketHandler.getHandler(opcode);
-        if ((packetHandler != null) && packetHandler.validateState(client)){
-            // handle the packet not including the opcode
-            var packet = b.slice(2, b.length);
+//        var packetHandler = MaplePacketHandler.getHandler(opcode);
+//        if ((packetHandler != null) && packetHandler.validateState(client)){
 
-            console.log("printing packet");
-            for(var i = 0; i<packet.length; i++){
-                console.log(packet[i]);
+        var registered = false;
+        var opcodez = RecvOpcode.getOpcodes();
+        for(var i = 0; i < opcodez.length; i++){
+            if(opcode = opcodez[i]){
+                registered = true;
             }
-
-
-            //TODO check to see that packetHandler returns a different handler such that the handler returned has a method called handledPacket
-            packetHandler.handlePacket(packet, client);
         }
 
+        var packetHandler = handlers[opcode];
+        console.log("packetHandler is: "+packetHandler);
+        if(registered) {
+            if (packetHandler.validateState(client)) {
+                // handle the packet not including the opcode
+                var packet = b.slice(2, b.length);
+
+                console.log("printing packet");
+                for (var i = 0; i < packet.length; i++) {
+                    console.log(packet[i]);
+                }
+
+
+                //I DONT THINK I NEED THIS TODO ANYMORE ... check to see that packetHandler returns a different handler such that the handler returned has a method called handledPacket
+                packetHandler.handlePacket(packet, client);
+            }
+        }
+        else{
+            console.log("not registered: "+opcode);
+        }
 
     });
 
@@ -124,5 +206,3 @@ function write(sock, packets){
    sock.write(packets);
     console.log("packets have been written");
 }
-
-

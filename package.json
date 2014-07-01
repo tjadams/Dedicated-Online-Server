@@ -6,5 +6,6 @@
     "start": "node ./app"
   },
   "dependencies": {
+      "mysql" : "2.3.x"
   }
 }
