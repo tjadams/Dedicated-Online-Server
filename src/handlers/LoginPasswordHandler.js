@@ -1,15 +1,18 @@
 /**
  * Created by Tyler Adams on 29/06/2014.
  */
-var handlePacket = function(packet, client){
+ var LoginPasswordHandler = function(){
+
+};
+
+
+exports.handlePacket = function(packet, client){
     console.log("LoginPassword handlePacket");
 };
 
-var validateState = function(client){
+exports.validateState = function(client){
      return true;
 };
 
-module.exports = {
-    handlePacket: handlePacket,
-    validateState: validateState
-};
+
+module.exports = LoginPasswordHandler;

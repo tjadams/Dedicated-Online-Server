@@ -2,17 +2,18 @@
  * Created by Tyler Adams on 29/06/2014.
  */
 
+function AcceptToSHandler(){
+
+};
+
 // TODO EDIT ALL LOGIC
-var handlePacket = function(packet, client){
+exports.handlePacket = function(packet, client){
     console.log("AcceptToSHandler handlePacket");
 };
 
 
-var validateState = function(client){
+exports.validateState = function(client){
     return true;
 };
 
-module.exports = {
-    handlePacket: handlePacket,
-    validateState: validateState
-};
+module.exports = AcceptToSHandler;
