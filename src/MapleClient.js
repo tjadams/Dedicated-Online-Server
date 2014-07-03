@@ -16,4 +16,12 @@ MapleClient.prototype.setChannel = function (channel) {
     this.channel = channel;
 };
 
+MapleClient.prototype.announce = function (packet){
+    this.session.write(packet);
+};
+
+MapleClient.prototype.getPin = function(){
+    return this.pin;
+};
+
 module.exports = MapleClient;

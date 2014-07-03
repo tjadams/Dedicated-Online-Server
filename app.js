@@ -16,6 +16,10 @@ var HOST = '127.0.0.1';
 var PORT = 8484;
 var MAPLEVERSION = 83;
 
+
+// TODO current: AfterLoginHandler class
+
+
 ///*
 
 // oh noez you know my secrets!
