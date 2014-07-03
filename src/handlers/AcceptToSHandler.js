@@ -7,12 +7,12 @@ function AcceptToSHandler(){
 };
 
 // TODO EDIT ALL LOGIC
-exports.handlePacket = function(packet, client){
+AcceptToSHandler.prototype.handlePacket = function(packet, client){
     console.log("AcceptToSHandler handlePacket");
 };
 
 
-exports.validateState = function(client){
+AcceptToSHandler.prototype.validateState = function(client){
     return true;
 };
 

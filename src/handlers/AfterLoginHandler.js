@@ -5,11 +5,11 @@
     function AfterLoginHandler(){
 
 };
-exports.handlePacket = function(packet, client){
+AfterLoginHandler.prototype.handlePacket = function(packet, client){
     console.log("AfterLoginHandler handlePacket");
 };
                            // TODO EDIT ALL LOGIC
-exports.validateState = function(client){
+AfterLoginHandler.prototype.validateState = function(client){
     return true;
 };
 

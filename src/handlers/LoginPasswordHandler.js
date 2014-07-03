@@ -6,11 +6,11 @@
 };
 
 
-exports.handlePacket = function(packet, client){
+LoginPasswordHandler.prototype.handlePacket = function(packet, client){
     console.log("LoginPassword handlePacket");
 };
 
-exports.validateState = function(client){
+LoginPasswordHandler.prototype.validateState = function(client){
      return true;
 };
 
