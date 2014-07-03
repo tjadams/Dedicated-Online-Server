@@ -92,6 +92,9 @@ var server = net.createServer();
 server.listen(PORT, HOST);
 
 
+// TODO use a better data structure to handle the clients
+var clients = [];
+
 // handle first connection stuff (if this is called multiple times I'll need to add more logic)
 server.on('connection', function(sock) {
 
@@ -112,7 +115,14 @@ server.on('connection', function(sock) {
         // TODO verify these 3 lines work
         var opcode = b[0] + (b[1] << 8);
         console.log("opcode: "+opcode);
-        var client = MapleClient.getClient(sock);
+        var client;
+        for( var i = 0; i < clients.length; i++ ){
+            if(clients[i].session == sock){
+                // get the client associated with the socket
+                client = clients[i];
+            }
+        }
+
         console.log("client: "+client);
         // get an already initialized handler
 //        var packetHandler = MaplePacketHandler.getHandler(opcode);
@@ -150,6 +160,14 @@ server.on('connection', function(sock) {
     });
 
     sock.on('close', function(data) {
+        // remove the client from the list of clients
+        for(var i = 0; i < clients.length; i++){
+            if(clients[i].session == sock){
+                // remove from arraylist
+                clients.pop(clients[i]);
+            }
+        }
+
         console.log(sock.remoteAddress +':'+ sock.remotePort+' has disconnected with data: '+data);
     });
 
@@ -181,6 +199,8 @@ function firstConnect(sock){
     console.log("recvCypher toString: "+recvCypher);
 
     var client = new MapleClient(sendCypher, recvCypher, sock);
+
+    clients.push(client);
     //console.log("client toString: "+client);
 
     // initialize clients to have login server attributes
