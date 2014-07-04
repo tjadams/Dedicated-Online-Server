@@ -2,7 +2,8 @@
  * Created by Tyler Adams on 29/06/2014.
  */
 
-var MaplePacketCreator = require('MaplePacketCreator.js');
+var MaplePacketCreator = require('../MaplePacketCreator.js');
+var MapleClient = require('../MapleClient.js');
 
 function AfterLoginHandler(){
 
@@ -19,12 +20,15 @@ AfterLoginHandler.prototype.handlePacket = function(packet, client){
     // TODO packet must be a Buffer.
     //byte
     var c2 = packet[0];
-    packet.pop(packet[0]);
+    //pop this byte
+    packet.slice(1,packet.length);
      //byte
     var c3 = 5;
     if (packet.length > 0) {
         c3 = packet[0];
-        packet.pop(packet[0]);
+        //pop this byte
+        packet.slice(1,packet.length);
+
     }
     if (c2 == 1 && c3 == 1) {
         if (client.getPin() == null) {
@@ -36,8 +40,7 @@ AfterLoginHandler.prototype.handlePacket = function(packet, client){
     } else if (c2 == 1 && c3 == 0) {
 
         var pin = MaplePacketCreator.readMapleAsciiString(packet);
-        // TODO pop the bytes from the string from the packet buffer
-
+         // NOTE: usually, I would need to pop/slice the packets but there are no other calls to the buffer after this so I don't need to
 
         if (client.checkPin(pin)) {
             client.announce(MaplePacketCreator.pinAccepted());
@@ -46,14 +49,14 @@ AfterLoginHandler.prototype.handlePacket = function(packet, client){
         }
     } else if (c2 == 2 && c3 == 0) {
         var pin = MaplePacketCreator.readMapleAsciiString(packet);
-        // TODO pop the bytes from the string from the packet buffer
+        // NOTE: usually, I would need to pop/slice the packets but there are no other calls to the buffer after this so I don't need to
         if (client.checkPin(pin)) {
             client.announce(MaplePacketCreator.registerPin());
         } else {
             client.announce(MaplePacketCreator.requestPinAfterFailure());
         }
     } else if (c2 == 0 && c3 == 5) {
-        client.updateLoginState(MapleClient.LOGIN_NOTLOGGEDIN);
+        client.updateLoginState(MapleClient.values.LOGIN_NOTLOGGEDIN);
     }
 
 };
