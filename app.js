@@ -52,14 +52,10 @@ connection.connect(function(err) {
     });
 
     // TODO add extra initial connection stuff
+
+    connection.end();
 });
 
-if(isCon){
-    connection.end();
-    isCon = false;
-}else{
-    // TODO break the server somehow
-}
 
 
 // loop through all opcodes searching for the largest byte value of the opcode
@@ -111,14 +107,14 @@ server.on('connection', function(sock) {
         b = Buffer.concat([b,data]);
         console.log('Data received from ' + sock.remoteAddress);
 
-        for( var i=0; i< b.length; i++){
-                console.log(b[i]);
-        }
+//        for( var i=0; i< b.length; i++){
+//                console.log(b[i]);
+//        }
 
         // read the short to determine the packetID/opcode
         // TODO verify these 3 lines work
         var opcode = b[0] + (b[1] << 8);
-        console.log("opcode: "+opcode);
+        console.log("opcode short: "+opcode+"    Opcode bytes: "+b[0]+" "+b[1]);
         var client;
         for( var i = 0; i < clients.length; i++ ){
             if(clients[i].session == sock){
@@ -127,30 +123,32 @@ server.on('connection', function(sock) {
             }
         }
 
-        console.log("client: "+client);
+//        console.log("client: "+client.session);
         // get an already initialized handler
 //        var packetHandler = MaplePacketHandler.getHandler(opcode);
 //        if ((packetHandler != null) && packetHandler.validateState(client)){
 
         var registered = false;
         var opcodez = RecvOpcode.getOpcodes();
+        var matchedHandler;
         for(var i = 0; i < opcodez.length; i++){
-            if(opcode = opcodez[i]){
+            if(opcode == opcodez[i]){
                 registered = true;
+                matchedHandler = handlers[opcode];
             }
         }
 
-        var packetHandler = handlers[opcode];
+        var packetHandler = matchedHandler;
         console.log("packetHandler is: "+packetHandler);
         if(registered) {
             if (packetHandler.validateState(client)) {
                 // handle the packet not including the opcode
                 var packet = b.slice(2, b.length);
 
-                console.log("printing packet");
-                for (var i = 0; i < packet.length; i++) {
-                    console.log(packet[i]);
-                }
+//                console.log("printing packet");
+//                for (var i = 0; i < packet.length; i++) {
+//                    console.log(packet[i]);
+//                }
 
 
                 //I DONT THINK I NEED THIS TODO ANYMORE ... check to see that packetHandler returns a different handler such that the handler returned has a method called handledPacket
@@ -194,8 +192,8 @@ function firstConnect(sock){
     var ivRecv = new Buffer([70, 114, 122, 82]);
     var ivSend = new Buffer([82, 48, 120, 115]);
 
-    ivRecv[3] = Math.random() * 255;
-    ivSend[3] = Math.random() * 255;
+//    ivRecv[3] = Math.random() * 255;
+//    ivSend[3] = Math.random() * 255;
 
     var sendCypher = new MapleAESOFB(key, ivSend, MAPLEVERSION , true);
     console.log("sendCypher toString: "+sendCypher);

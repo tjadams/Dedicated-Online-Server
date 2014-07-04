@@ -2,6 +2,8 @@
  * Created by Tyler Adams on 26/06/2014.
  */
 
+var SendOpcode = require('./SendOpcode.js');
+
 
 // NOTE: buffer.write() was giving me incorrect values. Buffer.concat() works better.
 function MaplePacketCreator()  {
@@ -46,7 +48,7 @@ function logBuffer (string, buffer){
     for( var i =0; i<buffer.length; i++){
         console.log(buffer[i]);
     }
-}
+};
 
 function write(byte, buffer){
     var temp = new Buffer(1);
@@ -56,7 +58,53 @@ function write(byte, buffer){
     return buffer;
 };
 
+function registerPin(){
+    return pinOperation(1);
+};
+
+function pinOperation(mode){
+    var buffer = new Buffer(0);
+    buffer = writeShort(SendOpcode.opcodes.CHECK_PINCODE, buffer);
+    buffer = write(mode, buffer);
+    return buffer;
+};
+
+function requestPin(){
+    return pinOperation(4);
+};
+
+function readMapleAsciiString(packet){
+    return readAsciiString(readShort(packet), packet.slice(2,packet.length));
+};
+
+function readShort(packet){
+    return (packet[0] + (packet[1] << 8));
+}
+
+
+function readAsciiString (short, packet){
+    var ret = "";
+    for (var x = 0; x < short; x++) {
+        ret = ret+packet[x];
+    }
+    return ret;
+};
+
+function pinAccepted(){
+    return pinOperation(0);
+};
+
+function requestPinAfterFailure(){
+    return pinOperation(2);
+};
+
 // required for importing a method as in Java
 module.exports = {
-    getHello: getHello
+    getHello: getHello,
+    registerPin: registerPin,
+    requestPin: requestPin,
+    readMapleAsciiString: readMapleAsciiString,
+    pinAccepted: pinAccepted ,
+    requestPinAfterFailure: requestPinAfterFailure()
+
 };
