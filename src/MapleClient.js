@@ -56,4 +56,21 @@ MapleClient.prototype.updateLoginState = function(state){
 
 };
 
+MapleClient.prototype.setDecoderState = function(decoderState){
+    this.decoderState = decoderState;
+};
+
+MapleClient.prototype.setDecoderPacketLength = function(decoderPacketLength){
+    this.decoderPacketLength = decoderPacketLength;
+};
+
+MapleClient.prototype.getDecoderPacketLength = function(){
+    return this.decoderPacketLength;
+};
+
+
+MapleClient.prototype.getDecoderState = function(){
+    return this.decoderState;
+};
+
 module.exports = MapleClient;

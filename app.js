@@ -94,7 +94,7 @@ server.listen(PORT, HOST);
 
 // TODO use a better data structure to handle the clients
 var clients = [];
-
+var wasDecoded;
 // handle first connection stuff (if this is called multiple times I'll need to add more logic)
 server.on('connection', function(sock) {
 
@@ -106,6 +106,26 @@ server.on('connection', function(sock) {
         var b = new Buffer(0);
         b = Buffer.concat([b,data]);
         console.log('Data received from ' + sock.remoteAddress);
+        // TODO before I try to get the opcode, I need to decode the buffer
+
+        var client;
+        for( var i = 0; i < clients.length; i++ ){
+            if(clients[i].session == sock){
+                // get the client associated with the socket
+                client = clients[i];
+                //TODO verify this loop works
+                console.log("I think the client connected is: "+client.session.remoteAddress+":"+client.session.remotePort);
+            }
+        }
+
+        wasDecoded = false;
+        b = doDecode(b, client);
+        if(!wasDecoded){
+            // TODO add logic for this
+            console.log("Wasn't decoded, may need to call doDecode more than once to continue decoding a large buffer.");
+        }
+
+
 
 //        for( var i=0; i< b.length; i++){
 //                console.log(b[i]);
@@ -113,15 +133,10 @@ server.on('connection', function(sock) {
 
         // read the short to determine the packetID/opcode
         // TODO verify these 3 lines work
-        var opcode = b[0] + (b[1] << 8);
+
+        var opcode = (b[0] & 0xFF) + ((b[1] & 0xFF) << 8);
         console.log("opcode short: "+opcode+"    Opcode bytes: "+b[0]+" "+b[1]);
-        var client;
-        for( var i = 0; i < clients.length; i++ ){
-            if(clients[i].session == sock){
-                // get the client associated with the socket
-                client = clients[i];
-            }
-        }
+
 
 //        console.log("client: "+client.session);
         // get an already initialized handler
@@ -208,6 +223,8 @@ function firstConnect(sock){
     // initialize clients to have login server attributes
     client.setWorld(-1);
     client.setChannel(-1);
+    client.setDecoderState(false);
+    client.setDecoderPacketLength(-1);
 
     var unencryptedPackets = MaplePacketCreator.getHello(MAPLEVERSION, ivSend, ivRecv);
 
@@ -221,6 +238,69 @@ function firstConnect(sock){
     // NOTE: I am not setting attributes to the socket yet
 //    sock.setAttribute(MapleClient.CLIENT_KEY, client);
 }
+
+
+//TODO may not need this method...
+function doDecode(buffer, client)
+{
+    var decoderState = client.getDecoderState();
+    var decoderPacketLength = client.getDecoderPacketLength();
+
+    // new decoding session
+    if (decoderState == false) {
+        decoderState = true;
+    }
+    // we have enough byte length in the Buffer for a header and the decoder has recently been initialized
+    if (buffer.length >= 4 && decoderPacketLength == -1) {
+
+        // get the integer and slice the buffer after that
+        var packetHeader = buffer.getInt();
+        buffer.slice(4, buffer.length);
+
+        // check to see if the header of this packet contains information we want
+        if (!client.getReceiveCrypto().checkPacket(packetHeader)) {
+            // TODO check that this closes the client's session with the socket
+            client.session.close(true);
+            decoderState = false;
+            wasDecoded = false;
+            // TODO jump to the end of this method
+        }
+        // the length of the packet data not including header
+        // does this include opcode? I hope so!!!
+        decoderPacketLength = MapleAESOFB.getPacketLength(packetHeader);
+    } else if (buffer.length < 4 && decoderPacketLength == -1) {
+        decoderState = false;
+        wasDecoded = false;
+        // TODO jump to the end of this method
+    }
+    // read the rest of the packet
+    if (buffer.length >= decoderPacketLength) {
+        var decryptedPacket = [decoderPacketLength];
+
+        // TODO get the whole packet from the Buffer by filling in the byte array from 0 to decoderPacketlength
+        var decryptedPacket = new Buffer(decoderPacketLength);
+        for( var i  = 0; i<decoderPacketLength; i++){
+             decryptedPacket[i] = buffer[i];
+        }
+        // set it to re-initialized state
+        decoderPacketLength = -1;
+
+        // TODO may not need this first line but it does update IV etc
+        decryptedPacket = client.getReceiveCrypto().crypt(decryptedPacket);
+        // it is more likely that I need this line.
+       decryptedPacket = MapleCustomEncryption.decryptData(decryptedPacket);
+        wasDecoded = true;
+    }
+
+    // update values for client
+    client.setDecoderState(decoderState);
+    client.setDecoderPacketLength(decoderPacketLength);
+
+    // TODO update this client in the array of clients because I dont think javascript passes by reference
+
+    return decryptedPacket;
+}
+
 
 function write(sock, packets){
 
