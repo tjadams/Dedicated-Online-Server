@@ -78,8 +78,8 @@ function readMapleAsciiString(packet){
 };
 
 function readShort(packet){
-    return (packet[0] + (packet[1] << 8));
-}
+    return ((packet[0] & 0xFF) + ((packet[1] & 0xFF) << 8));
+};
 
 
 function readAsciiString (short, packet){
