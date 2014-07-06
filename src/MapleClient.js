@@ -68,6 +68,10 @@ MapleClient.prototype.getDecoderPacketLength = function(){
     return this.decoderPacketLength;
 };
 
+MapleClient.prototype.getReceiveCrypto = function(){
+    return this.receive;
+};
+
 
 MapleClient.prototype.getDecoderState = function(){
     return this.decoderState;
