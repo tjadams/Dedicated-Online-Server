@@ -14,5 +14,8 @@ LoginPasswordHandler.prototype.validateState = function(client){
      return true;
 };
 
+LoginPasswordHandler.prototype.toString = function(){
+    return "LoginPasswordHandler";
+};
 
 module.exports = LoginPasswordHandler;

@@ -66,4 +66,8 @@ AfterLoginHandler.prototype.validateState = function(client){
     return true;
 };
 
+AfterLoginHandler.prototype.toString = function(){
+    return "AfterLoginHandler";
+};
+
 module.exports = AfterLoginHandler;

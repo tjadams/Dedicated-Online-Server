@@ -11,6 +11,9 @@ AcceptToSHandler.prototype.handlePacket = function(packet, client){
     console.log("AcceptToSHandler handlePacket");
 };
 
+AcceptToSHandler.prototype.toString = function(){
+      return "AcceptToSHandler";
+};
 
 AcceptToSHandler.prototype.validateState = function(client){
     return true;
