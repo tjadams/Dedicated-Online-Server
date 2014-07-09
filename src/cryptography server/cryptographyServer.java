@@ -29,7 +29,6 @@ import java.util.Calendar;
  * Created by Tyler Adams on 26/06/2014.
     NOTE: lots of logic here comes from the moopledev source rev 119 since I don't want to worry about encryption.
     Dependencies listed above may be added in future commits.
-
  */
 public class cryptographyServer extends IoHandlerAdapter implements Runnable {
 
