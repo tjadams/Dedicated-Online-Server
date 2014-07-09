@@ -112,21 +112,19 @@ server.on('connection', function(sock) {
     firstConnect(sock);
 
     sock.on('data', function(data) {
-        signed = [data.length];
+//        signed = [data.length];
 //        console.log("signed: ");
         // transform all bytes greater than the signed byte range into signed bytes
-        for(var i = 0; i<data.length; i++){
-            signed[i] = data[i];
-            if(signed[i] > 127){
-                // subtract a byte (256 bits)
-                signed[i] = (signed[i] - 256);
+//        for(var i = 0; i<data.length; i++){
+//            signed[i] = data[i];
+//            if(signed[i] > 127){
+//                subtract a byte (256 bits)
+//                signed[i] = (signed[i] - 256);
 
 //                console.log(""+signed[i]+" ");
-            }
-        }
+//            }
+//        }
         console.log('Data received from ' + sock.remoteAddress);
-
-
 
         var client;
 
@@ -137,49 +135,25 @@ server.on('connection', function(sock) {
             }
         }
 
-        // new decryption session
-        decryptedPacket = -1;
-        var stillDecode = true;
+//        // new decryption session
+//        decryptedPacket = -1;
+//        var stillDecode = true;
+//
+//        var decodeTimes = 0;
+//        //Before I get the opcode, I need to decode the buffer and get the decryptedPacket
+//        while (stillDecode) {
+//            stillDecode = doDecode(signed, client);
+//            console.log("decodeTimes: "+ (decodeTimes++));
+//        }
 
-        var decodeTimes = 0;
-        //Before I get the opcode, I need to decode the buffer and get the decryptedPacket
-        while (stillDecode) {
-            stillDecode = doDecode(signed, client);
-            console.log("decodeTimes: "+ (decodeTimes++));
-        }
+        // TODO make asynchronous instead of synchronous
+        // write packets to the Java decode server to be decoded
+        // upon a response do stuff
+        cryptSOCK.write(data);
+    });
 
-        // read the short to determine the packetID/opcode
-        if (decryptedPacket == -1) {
-            console.log("DECRYPTION FAILED");
-        } else {
-            var opcode = (decryptedPacket[0] & 0xFF) + ((decryptedPacket[1] & 0xFF) << 8);
-
-//            var opcode = decryptedPacket.readInt16LE(0);
-            console.log("opcode short: " + opcode + "    Opcode bytes: " + decryptedPacket[0] + " " + decryptedPacket[1]);
-        }
-
-        var registered = false;
-        var opcodez = RecvOpcode.getOpcodes();
-        var matchedHandler;
-        for(var i = 0; i < opcodez.length; i++){
-            if(opcode == opcodez[i]){
-                registered = true;
-                matchedHandler = handlers[opcode];
-            }
-        }
-
-        var packetHandler = matchedHandler;
-        console.log("packetHandler is: "+packetHandler);
-        if(registered) {
-            if (packetHandler.validateState(client)) {
-                // handle the packet not including the opcode
-                var packet = decryptedPacket.slice(2, decryptedPacket.length);
-                packetHandler.handlePacket(packet, client);
-            }
-        }
-        else{
-            console.log("not registered: "+opcode);
-        }
+    sock.on('error', function(data) {
+        console.error("error thrown by client: "+data);
     });
 
     sock.on('close', function(data) {
@@ -200,6 +174,94 @@ server.on('connection', function(sock) {
 console.log('Server hosted on ' + HOST +':'+ PORT);
 //*/
 
+
+//var cryptServer = net.createServer();
+var cryptPORT = PORT + 1;
+var isCryptConnected = false;
+var cryptSOCK = -1;
+var cryptDATA = -1;
+//cryptServer.listen(cryptPORT, HOST);
+var cryptSOCK = net.connect({port: 8485},
+    function() { //'connect' listener
+        console.log('Encryption server connected');
+//        client.write('world!\r\n');
+    });
+cryptSOCK.on('data', function(data) {
+    for(var i = 0; i < data.length; i++){
+        cryptDATA = new Buffer(data.length);
+        cryptDATA[i] = data[i];
+    }
+    handleDecodedPackets();
+
+});
+cryptSOCK.on('end', function() {
+    console.log('encryption server disconnected');
+});
+  /*
+cryptServer.on('connection', function(sock) {
+    isCryptConnected = true;
+    console.log("Encryption server "+sock.remoteAddress +':'+ sock.remotePort+' has connected');
+    cryptSOCK = sock;
+    sock.on('data', function(data) {
+         for(var i = 0; i < data.length; i++){
+             cryptDATA = new Buffer(data.length);
+             cryptDATA[i] = data[i];
+         }
+        handleDecodedPackets();
+    });
+
+    sock.on('error', function(data) {
+        console.error("error thrown by Java : "+data);
+    });
+
+    sock.on('close', function(data) {
+
+
+    });
+}).listen(cryptPORT, HOST);
+console.log("cryptServer hosted on "+HOST+":"+cryptPORT);
+*/
+
+function handleDecodedPackets(){
+    // continue with handling
+    decryptedPacket = cryptDATA;
+    // read the short to determine the packetID/opcode
+    if (decryptedPacket == -1) {
+        console.log("DECRYPTION FAILED");
+    } else {
+        var opcode = (decryptedPacket[0] & 0xFF) + ((decryptedPacket[1] & 0xFF) << 8);
+
+//            var opcode = decryptedPacket.readInt16LE(0);
+        console.log("opcode short: " + opcode + "    Opcode bytes: " + decryptedPacket[0] + " " + decryptedPacket[1]);
+    }
+
+    var registered = false;
+    var opcodez = RecvOpcode.getOpcodes();
+    var matchedHandler;
+    for(var i = 0; i < opcodez.length; i++){
+        if(opcode == opcodez[i]){
+            registered = true;
+            matchedHandler = handlers[opcode];
+        }
+    }
+
+    var packetHandler = matchedHandler;
+    console.log("packetHandler is: "+packetHandler);
+    if(registered) {
+        if (packetHandler.validateState(client)) {
+            // handle the packet not including the opcode
+            var packet = decryptedPacket.slice(2, decryptedPacket.length);
+            packetHandler.handlePacket(packet, client);
+        }
+    }
+    else{
+        console.log("not registered: "+opcode);
+    }
+}
+
+
+
+
 function firstConnect(sock){
     var key =  new Buffer(
         [0x13, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
@@ -207,8 +269,24 @@ function firstConnect(sock){
         0x1B, 0x00, 0x00, 0x00, 0x0F, 0x00, 0x00, 0x00,
         0x33, 0x00, 0x00, 0x00, 0x52, 0x00, 0x00, 0x00]);
 
+//    console.log("key length: "+key.length);
+    /*
+    var key =
+        [0x13, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
+        0x06, 0x00, 0x00, 0x00, 0xB4, 0x00, 0x00, 0x00,
+        0x1B, 0x00, 0x00, 0x00, 0x0F, 0x00, 0x00, 0x00,
+        0x33, 0x00, 0x00, 0x00, 0x52, 0x00, 0x00, 0x00];
+      */
+    // for use with createcipheriv
+//    var ivRecv = new Buffer([70, 114, 122, 82,0,0,0,0,0,0,0,0,0,0,0,0]);
+//    var ivSend = new Buffer([82, 48, 120, 115,0,0,0,0,0,0,0,0,0,0,0,0]);
+
+
     var ivRecv = new Buffer([70, 114, 122, 82]);
     var ivSend = new Buffer([82, 48, 120, 115]);
+//    var ivRecv = new Buffer([70, 114, 122, 82,70, 114, 122, 82,70, 114, 122, 82,70, 114, 122, 82]);
+
+//    var ivSend = new Buffer([82, 48, 120, 115,82, 48, 120, 115,82, 48, 120, 115,82, 48, 120, 115]);
 
     // TODO randomize IV
 //    ivRecv[3] = Math.random() * 255;
@@ -339,5 +417,8 @@ function write(sock, packets){
 
     // TODO maybe do some packet encoding/decoding later
    sock.write(packets);
+//    var buffer = new Buffer([-35,-50]);
+//    console.log(buffer[0]+" "+buffer[1]);
+
    console.log("Wrote to client: "+sock.remoteAddress+":"+sock.remotePort);
 }
