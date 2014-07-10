@@ -1,5 +1,4 @@
 var crypto = require('crypto');
-
 //TODO comment my code
 
 var funnyBytes = new Buffer([ 0xEC,  0x3F,  0x77,  0xA4,  0x45,  0xD0,  0x71,  0xBF,  0xB7,  0x98,  0x20,  0xFC,
@@ -19,10 +18,7 @@ var funnyBytes = new Buffer([ 0xEC,  0x3F,  0x77,  0xA4,  0x45,  0xD0,  0x71,  0
      0x1F,  0x3A,  0x43,  0x8A,  0x96,  0x41,  0x74,  0xAC,  0x52,  0x33,  0xF0,  0xD9,  0x29,  0x80,  0xB1,  0x16,
      0xD3,  0xAB,  0x91,  0xB9,  0x84,  0x7F,  0x61,  0x1E,  0xCF,  0xC5,  0xD1,  0x56,  0x3D,  0xCA,  0xF4,  0x05,
      0xC6,  0xE5,  0x08,  0x49]);
-
-// initialize to a 4 byte iv
-var iv = new Buffer([[0, 0, 0, 0]]);
-
+var aes;
 
 
 function MapleAESOFB (key, iv, mapleVersion, isSend){
@@ -32,7 +28,10 @@ function MapleAESOFB (key, iv, mapleVersion, isSend){
         this.mapleVersion = (this.mapleVersion + 1) * (-1);
     }
     // The cipher is AES256 because the key has 32 bytes which is 256 bits
-    this.cipher = crypto.createCipher('aes256',key);
+    aes = require('crypto').createCipheriv('aes-256-ecb', key, '');
+
+    // TODO don't need for now
+//    this.cipher = aes;
 };
 
 MapleAESOFB.prototype.toString = function () {
@@ -80,23 +79,24 @@ MapleAESOFB.prototype.crypt = function(packet){
     while (remaining > 0) {
         var myIv = multiplyBytes(this.iv, 4, 4);
 
-//        console.log("\n\nmyIv: ");
-//        for( var i =0; i<myIv.length; i++){
-//            console.log(myIv[i]);
-//        }
+        var buff = new Buffer(myIv.length);
+        for(var i = 0; i < myIv.length; i++){
+              buff[i] = myIv[i];
+            console.log(buff[i]);
+        }
+
+        myIv = buff;
 
         if (remaining < llength) {
             llength = remaining;
         }
 
         for (var x = start; x < (start + llength); x++) {
+            var newIv = myIv.slice();
             if ((x - start) % myIv.length == 0) {
-//                myIv is a buffer
-//                TODO this line should finalize the enciphering
-                var newIv = this.cipher.update(myIv,'binary', 'binary');
-//
-//                var newIv = this.cipher.update(myIv[x],'binary', 'binary');
-//                var newIv = this.cipher.final();
+                // update the IV (yay!)
+                newIv = aes.update(newIv);
+
                 console.log("\n\nnewIv");
                 for (var j = 0; j < myIv.length; j++) {
                     myIv[j] = newIv[j];
@@ -110,13 +110,13 @@ MapleAESOFB.prototype.crypt = function(packet){
         remaining -= llength;
         llength = 0x5B4;
     }
-    updateIv();
+    this.updateIv();
     return packet;
 };
 
-var updateIv = function(){
-    // can't say this.iv here because this is not a MapleAESOFB prototype function
-    iv = getNewIv(iv);
+
+MapleAESOFB.prototype.updateIv = function(){
+    this.iv = getNewIv(this.iv);
 };
 
 var getNewIv = function(oldIv){
