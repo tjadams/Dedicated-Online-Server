@@ -99,10 +99,10 @@ server.listen(PORT, HOST);
 
 // TODO use a better data structure to handle the clients
 var clients = [];
-//var ////wasDecoded;
-//var bufferData;
 var decryptedPacket;
-var signed;
+var beingDecrypted;
+
+var client;
 
 // handle first connection stuff (if this is called multiple times I'll need to add more logic)
 server.on('connection', function(sock) {
@@ -112,44 +112,25 @@ server.on('connection', function(sock) {
     firstConnect(sock);
 
     sock.on('data', function(data) {
-//        signed = [data.length];
-//        console.log("signed: ");
-        // transform all bytes greater than the signed byte range into signed bytes
-//        for(var i = 0; i<data.length; i++){
-//            signed[i] = data[i];
-//            if(signed[i] > 127){
-//                subtract a byte (256 bits)
-//                signed[i] = (signed[i] - 256);
-
-//                console.log(""+signed[i]+" ");
-//            }
-//        }
         console.log('Data received from ' + sock.remoteAddress);
-
-        var client;
-
         // get the client associated with the socket
         for (var i = 0; i < clients.length; i++) {
             if (clients[i].session == sock) {
                 client = clients[i];
             }
         }
+        // new decryption session
+        decryptedPacket = -1;
+        var stillDecode = true;
 
-//        // new decryption session
-//        decryptedPacket = -1;
-//        var stillDecode = true;
-//
-//        var decodeTimes = 0;
-//        //Before I get the opcode, I need to decode the buffer and get the decryptedPacket
-//        while (stillDecode) {
-//            stillDecode = doDecode(signed, client);
-//            console.log("decodeTimes: "+ (decodeTimes++));
-//        }
+        var decodeTimes = 0;
+        //Before I get the opcode, I need to decode the buffer and get the decryptedPacket
+        while (stillDecode) {
+            stillDecode = doDecode(data, client);
+            console.log("decodeTimes: "+ (decodeTimes++));
+        }
 
-        // TODO make asynchronous instead of synchronous
-        // write packets to the Java decode server to be decoded
-        // upon a response do stuff
-        cryptSOCK.write(data);
+        handleDecodedPackets();
     });
 
     sock.on('error', function(data) {
@@ -160,9 +141,6 @@ server.on('connection', function(sock) {
         // remove this client from the list of connected clients
         for(var i = 0; i < clients.length; i++){
             if(clients[i].session == sock){
-                // clients.pop(clients[i]);
-                // clients[i].pop();
-//                console.log(clients[i].session.remoteAddress +':'+ clients[i].session.remotePort+' has disconnected with data: '+data);
                 console.log(sock.remoteAddress +':'+ sock.remotePort+' has disconnected with data: '+data);
                 clients = _.without(clients,clients[i]);
             }
@@ -174,63 +152,12 @@ server.on('connection', function(sock) {
 console.log('Server hosted on ' + HOST +':'+ PORT);
 //*/
 
-
-//var cryptServer = net.createServer();
-var cryptPORT = PORT + 1;
-var isCryptConnected = false;
-var cryptSOCK = -1;
-var cryptDATA = -1;
-//cryptServer.listen(cryptPORT, HOST);
-var cryptSOCK = net.connect({port: 8485},
-    function() { //'connect' listener
-        console.log('Encryption server connected');
-//        client.write('world!\r\n');
-    });
-cryptSOCK.on('data', function(data) {
-    for(var i = 0; i < data.length; i++){
-        cryptDATA = new Buffer(data.length);
-        cryptDATA[i] = data[i];
-    }
-    handleDecodedPackets();
-
-});
-cryptSOCK.on('end', function() {
-    console.log('encryption server disconnected');
-});
-  /*
-cryptServer.on('connection', function(sock) {
-    isCryptConnected = true;
-    console.log("Encryption server "+sock.remoteAddress +':'+ sock.remotePort+' has connected');
-    cryptSOCK = sock;
-    sock.on('data', function(data) {
-         for(var i = 0; i < data.length; i++){
-             cryptDATA = new Buffer(data.length);
-             cryptDATA[i] = data[i];
-         }
-        handleDecodedPackets();
-    });
-
-    sock.on('error', function(data) {
-        console.error("error thrown by Java : "+data);
-    });
-
-    sock.on('close', function(data) {
-
-
-    });
-}).listen(cryptPORT, HOST);
-console.log("cryptServer hosted on "+HOST+":"+cryptPORT);
-*/
-
 function handleDecodedPackets(){
-    // continue with handling
-    decryptedPacket = cryptDATA;
     // read the short to determine the packetID/opcode
     if (decryptedPacket == -1) {
         console.log("DECRYPTION FAILED");
     } else {
         var opcode = (decryptedPacket[0] & 0xFF) + ((decryptedPacket[1] & 0xFF) << 8);
-
 //            var opcode = decryptedPacket.readInt16LE(0);
         console.log("opcode short: " + opcode + "    Opcode bytes: " + decryptedPacket[0] + " " + decryptedPacket[1]);
     }
@@ -251,6 +178,12 @@ function handleDecodedPackets(){
         if (packetHandler.validateState(client)) {
             // handle the packet not including the opcode
             var packet = decryptedPacket.slice(2, decryptedPacket.length);
+
+            console.log("\nPrinting decrypted packet content");
+            for(var i  = 0; i <decryptedPacket.length; i++){
+                console.log(decryptedPacket[i]);
+            }
+
             packetHandler.handlePacket(packet, client);
         }
     }
@@ -269,24 +202,8 @@ function firstConnect(sock){
         0x1B, 0x00, 0x00, 0x00, 0x0F, 0x00, 0x00, 0x00,
         0x33, 0x00, 0x00, 0x00, 0x52, 0x00, 0x00, 0x00]);
 
-//    console.log("key length: "+key.length);
-    /*
-    var key =
-        [0x13, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
-        0x06, 0x00, 0x00, 0x00, 0xB4, 0x00, 0x00, 0x00,
-        0x1B, 0x00, 0x00, 0x00, 0x0F, 0x00, 0x00, 0x00,
-        0x33, 0x00, 0x00, 0x00, 0x52, 0x00, 0x00, 0x00];
-      */
-    // for use with createcipheriv
-//    var ivRecv = new Buffer([70, 114, 122, 82,0,0,0,0,0,0,0,0,0,0,0,0]);
-//    var ivSend = new Buffer([82, 48, 120, 115,0,0,0,0,0,0,0,0,0,0,0,0]);
-
-
     var ivRecv = new Buffer([70, 114, 122, 82]);
     var ivSend = new Buffer([82, 48, 120, 115]);
-//    var ivRecv = new Buffer([70, 114, 122, 82,70, 114, 122, 82,70, 114, 122, 82,70, 114, 122, 82]);
-
-//    var ivSend = new Buffer([82, 48, 120, 115,82, 48, 120, 115,82, 48, 120, 115,82, 48, 120, 115]);
 
     // TODO randomize IV
 //    ivRecv[3] = Math.random() * 255;
@@ -310,18 +227,14 @@ function firstConnect(sock){
 
 function doDecode(buffer, client)
 {
-
-//    console.log("\nbyteArray");
-//    for(var i =0; i<buffer.length; i++){
-//        console.log(buffer[i] + " ");
-//    }
-
     var decoderState = client.getDecoderState();
     var decoderPacketLength = client.getDecoderPacketLength();
 
     // new decoding session
     if (decoderState == false) {
         decoderState = true;
+    }else{
+        buffer = beingDecrypted;
     }
     // we have enough byte length in the Buffer for a header and the decoder has recently been initialized
     if (buffer.length >= 4 && decoderPacketLength == -1) {
@@ -338,7 +251,7 @@ function doDecode(buffer, client)
            // the line below actually works
         // var packetHeader = buffer.readInt32BE(0);
         console.log("\ndoDecode packetHeader: "+packetHeader);
-    // TODO without this line I think it loops forever
+    //  without this line I think it loops forever because the buffer never decreases in size
         buffer = buffer.slice(4, buffer.length);
 
 
@@ -353,7 +266,6 @@ function doDecode(buffer, client)
             return false;
         }
         // the length of the packet data not including header
-        // does this include opcode? I hope so!!!
         decoderPacketLength = MapleAESOFB.getPacketLength(packetHeader);
         console.log("decoderPacketLength: " +decoderPacketLength);
     } else if (buffer.length < 4 && decoderPacketLength == -1) {
@@ -364,8 +276,6 @@ function doDecode(buffer, client)
     // read the rest of the packet
     if (buffer.length >= decoderPacketLength) {
         // get the whole packet from the Buffer by filling in the byte array from 0 to decoderPacketlength
-//        decryptedPacket = new Buffer(decoderPacketLength);
-//        decryptedPacket = new Buffer(decoderPacketLength);
        decryptedPacket = [decoderPacketLength];
         console.log("doDecode decryptedPacket: ");
         for( var i  = 0; i<decoderPacketLength; i++){
@@ -401,8 +311,7 @@ function updateDecodeValues(client, decoderState, decoderPacketLength, buffer){
     client.setDecoderState(decoderState);
     client.setDecoderPacketLength(decoderPacketLength);
     // update the buffer
-    signed = buffer;
-
+      beingDecrypted = buffer;
     // update this client in the array of clients because I dont think javascript passes by reference
     // TODO verify this works
     for( var i = 0; i < clients.length; i++ ){
@@ -417,8 +326,5 @@ function write(sock, packets){
 
     // TODO maybe do some packet encoding/decoding later
    sock.write(packets);
-//    var buffer = new Buffer([-35,-50]);
-//    console.log(buffer[0]+" "+buffer[1]);
-
    console.log("Wrote to client: "+sock.remoteAddress+":"+sock.remotePort);
 }
