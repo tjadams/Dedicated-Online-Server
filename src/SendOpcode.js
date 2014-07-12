@@ -7,7 +7,8 @@ function SendOpcode() {
 
 var opcodes = {
     // TODO add more opcodes for v83
-    CHECK_PINCODE: 0x06
+    CHECK_PINCODE: 0x06,
+    LOGIN_STATUS: 0x00
 
 };
 
