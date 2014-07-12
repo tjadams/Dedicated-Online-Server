@@ -23,6 +23,15 @@ var getHello = function (MAPLEVERSION, ivSend, ivRecv) {
     return buffer;
 };
 
+var getLoginFailed = function(loginok){
+    var buffer = new Buffer(0);
+    buffer = writeShort(SendOpcode.getOpcodes().LOGIN_STATUS, buffer);
+    buffer = write(loginok, buffer);
+    buffer = write(0, buffer);
+    buffer = writeInt(0, buffer);
+    return buffer;
+};
+
 function writeShort(short, buffer){
     var temp = new Buffer(2);
     temp[0] = "" + (short & 0xFF);
@@ -32,6 +41,18 @@ function writeShort(short, buffer){
 
     return buffer;
 };
+
+function writeInt(int, buffer){
+    var temp = new Buffer(4);
+    temp[0] = "" +  (int & 0xFF);
+    temp[1] = "" + ((int >>> 8) & 0xFF);
+    temp[2] = "" + ((int >>> 16) & 0xFF);
+    temp[3] = "" + ((int >>> 24) & 0xFF);
+    buffer = Buffer.concat([buffer,temp]);
+
+    return buffer;
+};
+
 
 function writeArray(byteArray, buffer){
     for(var i=0; i<byteArray.length; i++){
@@ -74,6 +95,7 @@ function requestPin(){
 };
 
 function readMapleAsciiString(packet){
+      // TODO this line may be wrong and I should add slicing
     return readAsciiString(readShort(packet), packet.slice(2,packet.length));
 };
 
@@ -98,6 +120,7 @@ function requestPinAfterFailure(){
     return pinOperation(2);
 };
 
+
 // required for importing a method as in Java
 module.exports = {
     getHello: getHello,
@@ -105,6 +128,7 @@ module.exports = {
     requestPin: requestPin,
     readMapleAsciiString: readMapleAsciiString,
     pinAccepted: pinAccepted ,
-    requestPinAfterFailure: requestPinAfterFailure()
+    requestPinAfterFailure: requestPinAfterFailure,
+    getLoginFailed: getLoginFailed
 
 };
