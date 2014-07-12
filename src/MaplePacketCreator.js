@@ -166,8 +166,8 @@ function requestPin(){
     return pinOperation(4);
 };
 
-function readMapleAsciiString(packet){
-      // TODO this line may be wrong and I should add slicing
+    function readMapleAsciiString(packet){
+      // the second paramter sends the actual string without the opcode
     return readAsciiString(readShort(packet), packet.slice(2,packet.length));
 };
 
@@ -179,7 +179,7 @@ function readShort(packet){
 function readAsciiString (short, packet){
     var ret = "";
     for (var x = 0; x < short; x++) {
-        ret = ret+packet[x];
+        ret = ret + String.fromCharCode(packet[x]);
     }
     return ret;
 };
