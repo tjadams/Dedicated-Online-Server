@@ -8,13 +8,13 @@ var MaplePacketCreator = require('../MaplePacketCreator');
 };
 
 
-LoginPasswordHandler.prototype.handlePacket = function(packet, client){
+LoginPasswordHandler.prototype.handlePacket = function(packet, c){
     var loginok;
     var login = MaplePacketCreator.readMapleAsciiString(packet);
     // TODO may not need slicing here
     var pwd = MaplePacketCreator.readMapleAsciiString(packet.slice(2,packet.length));
     c.setAccountName(login);
-    loginok = c.login(login, pwd);
+    loginok = c.loginMaple(login, pwd);
 
     // TODO add ban logic
     if (loginok != 0) {

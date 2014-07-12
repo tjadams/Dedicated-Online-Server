@@ -1,3 +1,5 @@
+var mysql = require('mysql');
+
 exports.values = {
     // TODO add more opcodes for v83
     LOGIN_NOTLOGGEDIN: 0,
@@ -24,7 +26,7 @@ var MapleClient = module.exports = function MapleClient(sendCypher, recvCypher, 
 };
 
 
-MapleClient.prototype.login = function(login, pwd){
+MapleClient.prototype.loginMaple = function(login, pwd){
     console.log("Account: "+this.accountName+" entered login().");
 
     this.loginattempt++;
@@ -87,7 +89,10 @@ MapleClient.prototype.login = function(login, pwd){
                     if (getLoginState() > this.LOGIN_NOTLOGGEDIN) {
                         this.loggedIn = false;
                         loginok = 7;
-                    } else if (pwd.equals(passhash) || checkHash(passhash, "SHA-1", pwd) || checkHash(passhash, "SHA-512", pwd + salt)) {
+                    }
+                    // TODO add a method similar to MoopleDev's checkHash
+                    else if (pwd.equals(passhash)){
+                        //|| checkHash(passhash, "SHA-1", pwd) || checkHash(passhash, "SHA-512", pwd + salt)) {
                         if (tos == 0) {
                             loginok = 23;
                         } else {
@@ -121,9 +126,8 @@ MapleClient.prototype.login = function(login, pwd){
     return loginok;
 };
 
+
 var getLoginState = function(){
-
-
 
 // oh noez you know my secrets!
     var connection = mysql.createConnection({
@@ -213,7 +217,7 @@ MapleClient.prototype.finishLogin = function(){
     return 0;
 };
 
-MapleClient.prototype.updateLoginState = function(newstate){
+var updateLoginState = function(newstate){
 
     var reference = this;
     var connection = mysql.createConnection({
