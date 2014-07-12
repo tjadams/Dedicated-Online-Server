@@ -32,6 +32,62 @@ var getLoginFailed = function(loginok){
     return buffer;
 };
 
+
+var getAuthSuccess = function(c){
+    var buffer = new Buffer(0);
+    buffer = writeShort(SendOpcode.getOpcodes().LOGIN_STATUS, buffer);
+    buffer = writeInt(0, buffer);
+    buffer = writeShort(0, buffer);
+    buffer = writeInt(c.accId, buffer);
+    buffer = write(c.gender, buffer);
+    buffer = writeBool(c.gmlevel > 0 , buffer);
+
+    // TODO verifies this gets the short value
+    var toWrite = c.gmlevel * 32;
+
+    buffer = write(toWrite > 0x80 ? 0x80 : toWrite, buffer);
+    buffer = writeBool(c.gmlevel > 0, buffer);
+    buffer = writeMapleAsciiString(c.getAccountName(), buffer);
+    buffer = write(0,buffer);
+    buffer = write(0,buffer);
+    buffer = writeLong(0, buffer);
+    buffer = writeLong(0, buffer);
+    buffer = writeInt(0, buffer);
+    buffer = writeShort(2, buffer);
+
+    return buffer;
+};
+
+
+function writeBool(b, buffer){
+    buffer = write(b ? 1 : 0, buffer);
+
+        return buffer;
+};
+
+function writeMapleAsciiString(s, buffer){
+    // TODO verify s.length is recognized as a short
+    buffer = writeShort(s.length, buffer);
+    buffer = writeAsciiString(s, buffer);
+    return buffer;
+};
+
+function writeAsciiString(s, buffer){
+    buffer = writeArray(getAsciiBytes(s), buffer);
+    return buffer;
+};
+
+function getAsciiBytes (s,buffer) {
+    var bytes = [];
+
+    for (var i = 0; i < s.length; ++i)
+    {
+        bytes.push(s.charCodeAt(i));
+    }
+
+    return bytes;
+};
+
 function writeShort(short, buffer){
     var temp = new Buffer(2);
     temp[0] = "" + (short & 0xFF);
@@ -53,6 +109,22 @@ function writeInt(int, buffer){
     return buffer;
 };
 
+
+function writeLong(long, buffer){
+    var temp = new Buffer(8);
+    temp[0] = "" +  (long & 0xFF);
+    temp[1] = "" + ((long >>> 8) & 0xFF);
+    temp[2] = "" + ((long >>> 16) & 0xFF);
+    temp[3] = "" + ((long >>> 24) & 0xFF);
+    temp[4] = "" + (((long >>> 32) & 0xFF));
+    temp[5] = "" + (((long >>> 40) & 0xFF));
+    temp[6] = "" + (((long >>> 48) & 0xFF));
+    temp[7] = "" + (((long >>> 56) & 0xFF));
+    buffer = Buffer.concat([buffer,temp]);
+
+    return buffer;
+
+};
 
 function writeArray(byteArray, buffer){
     for(var i=0; i<byteArray.length; i++){
@@ -129,6 +201,7 @@ module.exports = {
     readMapleAsciiString: readMapleAsciiString,
     pinAccepted: pinAccepted ,
     requestPinAfterFailure: requestPinAfterFailure,
-    getLoginFailed: getLoginFailed
+    getLoginFailed: getLoginFailed,
+    getAuthSuccess: getAuthSuccess
 
 };
