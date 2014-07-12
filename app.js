@@ -121,12 +121,13 @@ server.on('connection', function(sock) {
         }
         // new decryption session
         decryptedPacket = -1;
-        var stillDecode = true;
+        var dontDecode = false;
 
         var decodeTimes = 0;
         //Before I get the opcode, I need to decode the buffer and get the decryptedPacket
-        while (stillDecode) {
-            stillDecode = doDecode(data, client);
+        // if it ever returns true then it will break out of the loop
+        while (!dontDecode) {
+            dontDecode = doDecode(data, client);
             console.log("decodeTimes: "+ (decodeTimes++));
         }
 
@@ -243,13 +244,14 @@ function doDecode(buffer, client)
 
 //       var packetHeader = (buffer[0] & 0xFF) + ((buffer[1] & 0xFF) << 8) + ((buffer[2]  & 0xFF) << 16) + ((buffer[3] & 0xFF) << 24) ;      // huge number starting with 13
 //       var packetHeader = (buffer[0] & 0xFF) + ((buffer[1] & 0xFF) >> 8) + ((buffer[2]  & 0xFF) >> 16) + ((buffer[3] & 0xFF) >> 24) ; // 41
-       var packetHeader = (buffer[3] & 0xFF) + ((buffer[2] & 0xFF) << 8) + ((buffer[1]  & 0xFF) << 16) + ((buffer[0] & 0xFF) << 24) ;
 
 //        var packetHeader = buffer.readInt8(0);
 //        var packetHeader = (buffer.readInt8(0) & 0xFF) + ((buffer.readInt8(0) & 0xFF) << 8) + ((buffer.readInt8(0)  & 0xFF) << 16) + ((buffer.readInt8(0) & 0xFF) << 24) ;
 
-           // the line below actually works
-        // var packetHeader = buffer.readInt32BE(0);
+           // these lines below work seperately
+//        var packetHeader = buffer.readInt32BE(0);
+       var packetHeader = (buffer[3] & 0xFF) + ((buffer[2] & 0xFF) << 8) + ((buffer[1]  & 0xFF) << 16) + ((buffer[0] & 0xFF) << 24) ;
+
         console.log("\ndoDecode packetHeader: "+packetHeader);
     //  without this line I think it loops forever because the buffer never decreases in size
         buffer = buffer.slice(4, buffer.length);
@@ -259,7 +261,7 @@ function doDecode(buffer, client)
         // check to see if the header of this packet contains information we want
         // in this case, we are calling the int version of checkPacket
         if (!client.getReceiveCrypto().checkPacketInt(packetHeader)) {
-            console.log("Destroying socket session with client: "+client.session.remoteAddress);
+            console.log("\n\nDestroying socket session with client: "+client.session.remoteAddress+" due to packetHeader: "+packetHeader);
             client.session.destroy();
             decoderState = false;
             updateDecodeValues(client, decoderState, decoderPacketLength, buffer);
@@ -267,7 +269,7 @@ function doDecode(buffer, client)
         }
         // the length of the packet data not including header
         decoderPacketLength = MapleAESOFB.getPacketLength(packetHeader);
-        console.log("decoderPacketLength: " +decoderPacketLength);
+//        console.log("decoderPacketLength: " +decoderPacketLength);
     } else if (buffer.length < 4 && decoderPacketLength == -1) {
         decoderState = false;
         updateDecodeValues(client, decoderState, decoderPacketLength, buffer);
@@ -277,10 +279,10 @@ function doDecode(buffer, client)
     if (buffer.length >= decoderPacketLength) {
         // get the whole packet from the Buffer by filling in the byte array from 0 to decoderPacketlength
        decryptedPacket = [decoderPacketLength];
-        console.log("doDecode decryptedPacket: ");
+//        console.log("doDecode decryptedPacket: ");
         for( var i  = 0; i<decoderPacketLength; i++){
              decryptedPacket[i] = buffer[i];
-            console.log(buffer[i]);
+//            console.log(buffer[i]);
         }
         // set it to re-initialized state
         decoderPacketLength = -1;
@@ -288,16 +290,16 @@ function doDecode(buffer, client)
         // TODO Both lines are needed to properly decrypt.
        decryptedPacket = client.getReceiveCrypto().crypt(decryptedPacket);
 
-        console.log("doDecode decryptedPacket crypt: ");
-        for( var i  = 0; i<decryptedPacket.length; i++){
-            console.log(decryptedPacket[i]);
-        }
+//        console.log("doDecode decryptedPacket crypt: ");
+//        for( var i  = 0; i<decryptedPacket.length; i++){
+//            console.log(decryptedPacket[i]);
+//        }
        decryptedPacket = MapleCustomEncryption.decryptData(decryptedPacket);
 
-        console.log("doDecode decryptedPacket decryptData: ");
-        for( var i  = 0; i<decryptedPacket.length; i++){
-            console.log(decryptedPacket[i]);
-        }
+//        console.log("\ndoDecode finished decryptedPacket decryptData: \n");
+//        for( var i  = 0; i<decryptedPacket.length; i++){
+//            console.log(decryptedPacket[i]);
+//        }
        updateDecodeValues(client, decoderState, decoderPacketLength, buffer);
        return true;
     }
