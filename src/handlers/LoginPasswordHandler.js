@@ -9,18 +9,24 @@ var MaplePacketCreator = require('../MaplePacketCreator');
 
 
 LoginPasswordHandler.prototype.handlePacket = function(packet, c){
+    // TODO NOTE I HAVENT CODED PASSWORD HASHING YET
+    // TODO add ban logic
+    // TODO NOTE MINIMUM MAPLESTORY PWD LENGTH IS 5
+
     var loginok;
     var login = MaplePacketCreator.readMapleAsciiString(packet);
-    // TODO may not need slicing here
-    var pwd = MaplePacketCreator.readMapleAsciiString(packet.slice(2,packet.length));
+
+    // slice opcode and login string
+    packet = packet.slice(2 + login.length,packet.length);
+    var pwd = MaplePacketCreator.readMapleAsciiString(packet);
     c.setAccountName(login);
     loginok = c.loginMaple(login, pwd);
+    console.log("\n\nloginok="+loginok+"login="+login+"ENDOFLOGINSTRING pwd="+pwd+"ENDOFPWDSTRING");
 
-    // TODO add ban logic
     if (loginok != 0) {
+        console.log("Account: "+c.getAccountName()+ " login failed, most likely disconnecting");
         c.announce(MaplePacketCreator.getLoginFailed(loginok));
 
-        console.log("Account: "+c.getAccountName()+ "login failed");
         return;
     }
     // successful login
