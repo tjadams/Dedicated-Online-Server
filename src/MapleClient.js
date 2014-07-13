@@ -1,4 +1,5 @@
 var mysql = require('mysql');
+var MaplePacketCreator = require('./MaplePacketCreator');
 
 exports.values = {
     // TODO add more opcodes for v83
@@ -31,14 +32,13 @@ MapleClient.prototype.loginMaple = function(login, pwd){
 
     this.loginattempt++;
     if (this.loginattempt > 4) {
-
         console.log("Account: "+this.accountName+" too many attempts, closing");
-
         this.session.destroy();
     }
     var loginok = 5;
 
-
+    // TODO NOTE: this refers to the connection when I'm inside the mysql conenction, so I need a client reference if I want to call this as a MapleClient object
+    var clientReference = this;
 
     var connection = mysql.createConnection({
         host : 'localhost',
@@ -57,77 +57,93 @@ MapleClient.prototype.loginMaple = function(login, pwd){
             return;
         }
 
-        console.log('mySQL database connected as id ' + connection.threadId);
-        console.log("Account: "+this.accountName+" preparing database statement");
+        console.log("Account: "+clientReference.accountName+" preparing database statement");
 
         // TODO this looks like bad practise...
         connection.query("SELECT id, password, salt, gender, banned, gm, pin, pic, characterslots, tos FROM accounts WHERE name = ?",[login], function(err, rs) {
             if(err){
                 console.error(' back to 2007 we go!!');
             }else{
-                console.log("UPDATE login. Results: "+rs);
-
-                // pretty much says if the returned table has values because we only care about one row here.
-                // What rs.next does is positions the cursor before the current row then checks if the current row has stuff in it (true/false)
-                if (rs.next()) {
-                    if (rs.getByte("banned") == 1) {
+//                if (rs.size > 0) {
+                // TODO fix the above check to see if rs exists
+                    if (rs[0].banned == 1) {
                         return 3;
                     }
-                    this.accId = rs.getInt("id");
-                    this.gmlevel = rs.getInt("gm");
-//                    pin = rs.getString("pin");
-                    this.pin = rs[6];
-//                    pic = rs.getString("pic");
-                    this.pic = rs[7];
-                    this.gender = rs.getByte("gender");
-                    this.characterSlots = rs.getByte("characterslots");
-//                    var passhash = rs.getString("password");
-                    var passhash = rs[1];
-//                    var salt = rs.getString("salt");
-                    var salt = rs[2];
-                    var tos = rs.getByte("tos");
-                    if (getLoginState() > this.LOGIN_NOTLOGGEDIN) {
-                        this.loggedIn = false;
+                    clientReference.accId = rs[0].id;
+                    clientReference.gmlevel = rs[0].gm;
+                    clientReference.pin = rs[0].pin;
+                    clientReference.pic = rs[0].pic;
+                    clientReference.gender = rs[0].gender;
+                    clientReference.characterSlots = rs[0].characterslots;
+                    var passhash = rs[0].password;
+                    var salt = rs[0].salt;
+                    var tos = rs[0].tos;
+                    if (getLoginState() > clientReference.LOGIN_NOTLOGGEDIN) {
+                        clientReference.loggedIn = false;
                         loginok = 7;
                     }
                     // TODO add a method similar to MoopleDev's checkHash
-                    else if (pwd.equals(passhash)){
-                        //|| checkHash(passhash, "SHA-1", pwd) || checkHash(passhash, "SHA-512", pwd + salt)) {
+                    else if (pwd == passhash){
                         if (tos == 0) {
                             loginok = 23;
                         } else {
                             loginok = 0;
                         }
                     }else {
-                        this.loggedIn = false;
+                        clientReference.loggedIn = false;
                         loginok = 4;
                     }
 
-                    connection.query("INSERT INTO iplog (accountid, ip) VALUES (?, ?)",[this.accId, this.session.remoteAddress], function(err, rs) {
+                    connection.query("INSERT INTO iplog (accountid, ip) VALUES (?, ?)",[clientReference.accId, clientReference.session.remoteAddress], function(err, rs) {
                         if (err) {
                             console.error(' back to 2007 we go!!');
                         } else {
-                            console.log("inserted results: "+rs);
+                            console.log("inserted results: "+rs[0]);
                         }
                     });
-                }
+//                }
             }
 
             connection.end();
             console.log("Finished mySQL connection.");
+
+            // reset the client's loginattempts if login is successful
+            if (loginok == 0) {
+                clientReference.loginattempt = 0;
+            }
+
+            console.log("\n\nloginok = "+loginok+" login = "+login+" pwd = "+pwd);
+
+
+            // fixed nodejs problem with loginok = clientReference.loginMaple(blahblahlabl), because Node is non-blocking when I connect to mySql within clientReference.loginMaple, it will keep going into this method even before loginMaple is done
+            if (loginok != 0) {
+                console.log("Account: "+clientReference.getAccountName()+ " login failed, most likely disconnecting");
+                clientReference.announce(MaplePacketCreator.getLoginFailed(loginok));
+
+                return;
+            }
+            // successful login
+            if (clientReference.finishLogin() == 0) {
+                clientReference.announce(MaplePacketCreator.getAuthSuccess(clientReference));
+                console.log("Account: "+clientReference.getAccountName()+ "logged in successfuly");
+                // TODO add idle client disconnection for logged in clients
+            } else {
+                clientReference.announce(MaplePacketCreator.getLoginFailed(7));
+                console.log("Account: "+clientReference.getAccountName()+ "login failed");
+            }
+
+
         });
     });
 
-    // reset the client's loginattempts if login is successful
-    if (loginok == 0) {
-       this.loginattempt = 0;
-    }
 
-    return loginok;
+//    return loginok;
 };
 
 
 var getLoginState = function(){
+
+    var clientReference = this;
 
 // oh noez you know my secrets!
     var connection = mysql.createConnection({
@@ -150,65 +166,68 @@ var getLoginState = function(){
         console.log('mySQL database connected as id ' + connection.threadId);
 
         // TODO this looks like bad practise...
-        connection.query("SELECT loggedin, lastlogin, UNIX_TIMESTAMP(birthday) as birthday FROM accounts WHERE id = ?",[this.accId], function(err, results) {
+        connection.query("SELECT loggedin, lastlogin, UNIX_TIMESTAMP(birthday) as birthday FROM accounts WHERE id = ?",[clientReference.accId], function(err, results) {
             if(err){
                 console.error(' back to 2007 we go!! '+err);
-                this.loggedIn = false;
+                clientReference.loggedIn = false;
             }else {
-                if (!results.next()) {
-                    console.error("!Results.next this is not supposed to happen");
-                } else {
+                // TODO add a proper results check
+//                if (!results.next()) {
+//                    console.error("!Results.next this is not supposed to happen");
+//                } else {
 
                     // TODO add birthday stuff
                     console.log("UPDATE loggedin results: " + results);
 
 //                    this.state = rs.getInt("loggedin");
-                    this.state = results[0];
-                    if (this.state == this.LOGIN_SERVER_TRANSITION) {
-                        if (results[1].getTime() + 30000 < new Date().getTime()) {
-                            this.state = this.LOGIN_NOTLOGGEDIN;
-                            updateLoginState(this.LOGIN_NOTLOGGEDIN);
+                    clientReference.state = results[0].state;
+                    if (clientReference.state == clientReference.LOGIN_SERVER_TRANSITION) {
+                        if (results[0].lastlogin.getTime() + 30000 < new Date().getTime()) {
+                            clientReference.state = clientReference.LOGIN_NOTLOGGEDIN;
+                            updateLoginState(clientReference.LOGIN_NOTLOGGEDIN);
                         }
                     }
 
 
-                    if (this.state == this.LOGIN_LOGGEDIN) {
-                        this.loggedIn = true;
-                    }else if (this.state == this.LOGIN_SERVER_TRANSITION) {
+                    if (clientReference.state == clientReference.LOGIN_LOGGEDIN) {
+                        clientReference.loggedIn = true;
+                    }else if (clientReference.state == clientReference.LOGIN_SERVER_TRANSITION) {
 
-                        connection.query("UPDATE accounts SET loggedin = 0 WHERE id = ?",[this.accId], function(err, results) {
+                        connection.query("UPDATE accounts SET loggedin = 0 WHERE id = ?",[clientReference.accId], function(err, results) {
                             if (err) {
                                 console.error(' back to 2007 we go!! ' + err);
-                                this.loggedIn = false;
+                                clientReference.loggedIn = false;
                             } else {
 
                             }
                         });
                     } else {
-                        this.loggedIn = false;
+                        clientReference.loggedIn = false;
                     }
-                }
+//                }
             }
 
             connection.end();
             console.log("Finished mySQL connection.");
         });
     });
-    return this.state;
+    return clientReference.state;
 };
 
 
 MapleClient.prototype.setAccountName = function (login) {
-    this.login = login;
+    this.accountName = login;
 };
 
 MapleClient.prototype.getAccountName = function(){
-    return this.login;
+    return this.accountName;
 };
 
 MapleClient.prototype.finishLogin = function(){
     // TODO all this.values stuff should go to values, NOT the MapleClient object
-    if (getLoginState() > this.LOGIN_NOTLOGGEDIN) {
+
+    // NOTE: the client keeps going
+    if (getLoginState(this) > this.LOGIN_NOTLOGGEDIN) {
 
         // return an arbitrary number != 0 to not satisfy the if statement in AcceptToSHandler
         return 7;

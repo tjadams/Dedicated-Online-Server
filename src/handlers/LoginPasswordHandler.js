@@ -13,31 +13,19 @@ LoginPasswordHandler.prototype.handlePacket = function(packet, c){
     // TODO add ban logic
     // TODO NOTE MINIMUM MAPLESTORY PWD LENGTH IS 5
 
-    var loginok;
     var login = MaplePacketCreator.readMapleAsciiString(packet);
 
     // slice opcode and login string
     packet = packet.slice(2 + login.length,packet.length);
     var pwd = MaplePacketCreator.readMapleAsciiString(packet);
     c.setAccountName(login);
-    loginok = c.loginMaple(login, pwd);
-    console.log("\n\nloginok="+loginok+"login="+login+"ENDOFLOGINSTRING pwd="+pwd+"ENDOFPWDSTRING");
+    c.loginMaple(login, pwd);
+    // NOTE: the rest of this handler is contained blocking-ly in the non-blocking mySql connection
+    // method inside c.loginMaple();
 
-    if (loginok != 0) {
-        console.log("Account: "+c.getAccountName()+ " login failed, most likely disconnecting");
-        c.announce(MaplePacketCreator.getLoginFailed(loginok));
+    // TODO I should go through this entire code updating clients and etc since Javascript probably
+    // todo isn't pass by reference
 
-        return;
-    }
-    // successful login
-    if (c.finishLogin() == 0) {
-        c.announce(MaplePacketCreator.getAuthSuccess(c));
-        console.log("Account: "+c.getAccountName()+ "logged in successfuly");
-        // TODO add idle client disconnection for logged in clients
-    } else {
-        c.announce(MaplePacketCreator.getLoginFailed(7));
-        console.log("Account: "+c.getAccountName()+ "login failed");
-    }
 };
 
 LoginPasswordHandler.prototype.validateState = function(client){
