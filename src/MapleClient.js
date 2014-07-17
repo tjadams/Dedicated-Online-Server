@@ -232,7 +232,7 @@ MapleClient.prototype.finishLogin = function(){
         // return an arbitrary number != 0 to not satisfy the if statement in AcceptToSHandler
         return 7;
     }
-    this.updateLoginState(this.LOGIN_LOGGEDIN);
+    updateLoginState(this.LOGIN_LOGGEDIN);
     return 0;
 };
 
@@ -326,8 +326,54 @@ MapleClient.prototype.checkPin = function(pin){
     return false;
 };
 
-MapleClient.prototype.updateLoginState = function(state){
+MapleClient.prototype.acceptToS = function(){
+    // todo add non-blocking io with a callback
+    var shouldDisconnect = false;
+    var clientReference = this;
 
+    if(this.accountName == null){
+        return true;
+    }
+
+    var connection = mysql.createConnection({
+        host : 'localhost',
+        user: 'root',
+        password: 'root',
+        port: '3306',
+        // creative database name eh?
+        database: 'root'
+    });
+
+    // credit goes to moopledev creators for the logic in this method
+    connection.connect(function(err) {
+        if (err) {
+            console.error('error connecting: ' + err.stack);
+            return;
+        }
+
+        console.log('mySQL database connected as id ' + connection.threadId);
+
+        // TODO this looks like bad practise...
+        connection.query("SELECT `tos` FROM accounts WHERE id = ?",[clientReference.accId], function (err, results) {
+            if (err) {
+                console.error(' back to 2007 we go!!');
+            } else {
+                if (results != null) {
+                    if (results[0].tos == 1) {
+                        shouldDisconnect = true;
+                    }
+                }
+                connection.query("UPDATE accounts SET tos = 1 WHERE id = ?", [clientReference.accId], function (err, results) {
+                    if (err) {
+                        console.error(' back to 2007 we go!!');
+                    }
+                });
+            }
+            connection.end();
+            console.log("Finished mySQL connection.");
+        });
+    });
+    return shouldDisconnect;
 };
 
 MapleClient.prototype.setDecoderState = function(decoderState){
