@@ -192,6 +192,17 @@ function requestPinAfterFailure(){
     return pinOperation(2);
 };
 
+var readByte = function(packet) {
+//    var buffer = new Buffer(packet);
+
+    //todo NOTE: for now, readByte does not create a buffer based on an array
+    //todo NOTE: for now, readByte does not slice off the byte that is read from the array, the user of this method must handle that if necessary
+    //todo my Endianness may be wrong. I think it's correct because of how I receive the short value of the opcode in app.js
+    if(packet.length != 0){
+        return packet[0];
+    }
+    return null;
+};
 
 // required for importing a method as in Java
 module.exports = {
@@ -202,6 +213,6 @@ module.exports = {
     pinAccepted: pinAccepted ,
     requestPinAfterFailure: requestPinAfterFailure,
     getLoginFailed: getLoginFailed,
-    getAuthSuccess: getAuthSuccess
-
+    getAuthSuccess: getAuthSuccess,
+    readByte: readByte
 };
