@@ -53,8 +53,9 @@ connection.connect(function(err) {
             console.log("UPDATE loggedin results: "+results);
         }
 
-        connection.end();
-        console.log("Finished mySQL connection.");
+//todo add these lines to a server.onDestroy() as in Android  to close this connection and probably all the ones for all the connected clients
+//        connection.end();
+//        console.log("Finished mySQL connection.");
     });
 
     // TODO add extra initial connection stuff
@@ -213,7 +214,7 @@ function firstConnect(sock){
     var sendCypher = new MapleAESOFB(key, ivSend, MAPLEVERSION , true);
     var recvCypher = new MapleAESOFB(key, ivRecv, MAPLEVERSION, false);
 
-    var client = new MapleClient(sendCypher, recvCypher, sock);
+    var client = new MapleClient(sendCypher, recvCypher, sock, connection);
     clients.push(client);
 
     // initialize clients to have login server attributes

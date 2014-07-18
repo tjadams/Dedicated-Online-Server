@@ -9,7 +9,7 @@ exports.values = {
 };
 
 
-var MapleClient = module.exports = function MapleClient(sendCypher, recvCypher, sock) {
+var MapleClient = module.exports = function MapleClient(sendCypher, recvCypher, sock, connection) {
     this.send = sendCypher;
     this.receive = recvCypher;
     this.session = sock;
@@ -24,6 +24,7 @@ var MapleClient = module.exports = function MapleClient(sendCypher, recvCypher, 
     this.gender = "";
     this.loggedIn = false;
     this.state= this.LOGIN_NOTLOGGEDIN;
+    this.connection = connection;
 };
 
 
@@ -40,100 +41,82 @@ MapleClient.prototype.loginMaple = function(login, pwd){
     // TODO NOTE: this refers to the connection when I'm inside the mysql conenction, so I need a client reference if I want to call this as a MapleClient object
     var clientReference = this;
 
-    var connection = mysql.createConnection({
-        host : 'localhost',
-        user: 'root',
-        password: 'root',
-        port: '3306',
-        // creative database name eh?
-        database: 'root'
-    });
+    console.log("Account: "+clientReference.accountName+" preparing database statement");
 
-    var isCon = false;
-    connection.connect(function(err) {
-        isCon = true;
-        if (err) {
-            console.error('error connecting: ' + err.stack);
-            return;
+    // TODO this looks like bad practise...
+    clientReference.connection.query("SELECT id, password, salt, gender, banned, gm, pin, pic, characterslots, tos FROM accounts WHERE name = ?",[login], function(err, rs) {
+        if(err){
+            console.error(' back to 2007 we go!!');
+        }else{
+//                if (rs.size > 0) {
+            // TODO fix the above check to see if rs exists
+                if (rs[0].banned == 1) {
+                    return 3;
+                }
+                clientReference.accId = rs[0].id;
+                clientReference.gmlevel = rs[0].gm;
+                clientReference.pin = rs[0].pin;
+                clientReference.pic = rs[0].pic;
+                clientReference.gender = rs[0].gender;
+                clientReference.characterSlots = rs[0].characterslots;
+                var passhash = rs[0].password;
+                var salt = rs[0].salt;
+                var tos = rs[0].tos;
+                if (getLoginState() > clientReference.LOGIN_NOTLOGGEDIN) {
+                    clientReference.loggedIn = false;
+                    loginok = 7;
+                }
+                // TODO add a method similar to MoopleDev's checkHash
+                else if (pwd == passhash){
+                    if (tos == 0) {
+                        loginok = 23;
+                    } else {
+                        loginok = 0;
+                    }
+                }else {
+                    clientReference.loggedIn = false;
+                    loginok = 4;
+                }
+
+                connection.query("INSERT INTO iplog (accountid, ip) VALUES (?, ?)",[clientReference.accId, clientReference.session.remoteAddress], function(err, rs) {
+                    if (err) {
+                        console.error(' back to 2007 we go!!');
+                    } else {
+                        console.log("inserted results: "+rs[0]);
+                    }
+                });
+//                }
         }
 
-        console.log("Account: "+clientReference.accountName+" preparing database statement");
+//            connection.end();
+//            console.log("Finished mySQL connection.");
 
-        // TODO this looks like bad practise...
-        connection.query("SELECT id, password, salt, gender, banned, gm, pin, pic, characterslots, tos FROM accounts WHERE name = ?",[login], function(err, rs) {
-            if(err){
-                console.error(' back to 2007 we go!!');
-            }else{
-//                if (rs.size > 0) {
-                // TODO fix the above check to see if rs exists
-                    if (rs[0].banned == 1) {
-                        return 3;
-                    }
-                    clientReference.accId = rs[0].id;
-                    clientReference.gmlevel = rs[0].gm;
-                    clientReference.pin = rs[0].pin;
-                    clientReference.pic = rs[0].pic;
-                    clientReference.gender = rs[0].gender;
-                    clientReference.characterSlots = rs[0].characterslots;
-                    var passhash = rs[0].password;
-                    var salt = rs[0].salt;
-                    var tos = rs[0].tos;
-                    if (getLoginState() > clientReference.LOGIN_NOTLOGGEDIN) {
-                        clientReference.loggedIn = false;
-                        loginok = 7;
-                    }
-                    // TODO add a method similar to MoopleDev's checkHash
-                    else if (pwd == passhash){
-                        if (tos == 0) {
-                            loginok = 23;
-                        } else {
-                            loginok = 0;
-                        }
-                    }else {
-                        clientReference.loggedIn = false;
-                        loginok = 4;
-                    }
+        // reset the client's loginattempts if login is successful
+        if (loginok == 0) {
+            clientReference.loginattempt = 0;
+        }
 
-                    connection.query("INSERT INTO iplog (accountid, ip) VALUES (?, ?)",[clientReference.accId, clientReference.session.remoteAddress], function(err, rs) {
-                        if (err) {
-                            console.error(' back to 2007 we go!!');
-                        } else {
-                            console.log("inserted results: "+rs[0]);
-                        }
-                    });
-//                }
-            }
-
-            connection.end();
-            console.log("Finished mySQL connection.");
-
-            // reset the client's loginattempts if login is successful
-            if (loginok == 0) {
-                clientReference.loginattempt = 0;
-            }
-
-            console.log("\n\nloginok = "+loginok+" login = "+login+" pwd = "+pwd);
+        console.log("\n\nloginok = "+loginok+" login = "+login+" pwd = "+pwd);
 
 
-            // fixed nodejs problem with loginok = clientReference.loginMaple(blahblahlabl), because Node is non-blocking when I connect to mySql within clientReference.loginMaple, it will keep going into this method even before loginMaple is done
-            if (loginok != 0) {
-                console.log("Account: "+clientReference.getAccountName()+ " login failed, most likely disconnecting");
-                clientReference.announce(MaplePacketCreator.getLoginFailed(loginok));
+        // fixed nodejs problem with loginok = clientReference.loginMaple(blahblahlabl), because Node is non-blocking when I connect to mySql within clientReference.loginMaple, it will keep going into this method even before loginMaple is done
+        if (loginok != 0) {
+            console.log("Account: "+clientReference.getAccountName()+ " login failed, most likely disconnecting");
+            clientReference.announce(MaplePacketCreator.getLoginFailed(loginok));
 
-                return;
-            }
-            // successful login
-            if (clientReference.finishLogin() == 0) {
-                clientReference.announce(MaplePacketCreator.getAuthSuccess(clientReference));
-                console.log("Account: "+clientReference.getAccountName()+ "logged in successfuly");
-                // TODO add idle client disconnection for logged in clients
-            } else {
-                clientReference.announce(MaplePacketCreator.getLoginFailed(7));
-                console.log("Account: "+clientReference.getAccountName()+ "login failed");
-            }
+            return;
+        }
+        // successful login
+        if (clientReference.finishLogin() == 0) {
+            clientReference.announce(MaplePacketCreator.getAuthSuccess(clientReference));
+            console.log("Account: "+clientReference.getAccountName()+ "logged in successfuly");
+            // TODO add idle client disconnection for logged in clients
+        } else {
+            clientReference.announce(MaplePacketCreator.getLoginFailed(7));
+            console.log("Account: "+clientReference.getAccountName()+ "login failed");
+        }
 
 
-        });
     });
 
 
@@ -144,72 +127,52 @@ MapleClient.prototype.loginMaple = function(login, pwd){
 var getLoginState = function(){
 
     var clientReference = this;
+    console.log('mySQL database connected as id ' + connection.threadId);
 
-// oh noez you know my secrets!
-    var connection = mysql.createConnection({
-        host : 'localhost',
-        user: 'root',
-        password: 'root',
-        port: '3306',
-        // creative database name eh?
-        database: 'root'
-    });
-
-    var isCon = false;
-    connection.connect(function(err) {
-        isCon = true;
-        if (err) {
-            console.error('error connecting: ' + err.stack);
-            return;
-        }
-
-        console.log('mySQL database connected as id ' + connection.threadId);
-
-        // TODO this looks like bad practise...
-        connection.query("SELECT loggedin, lastlogin, UNIX_TIMESTAMP(birthday) as birthday FROM accounts WHERE id = ?",[clientReference.accId], function(err, results) {
-            if(err){
-                console.error(' back to 2007 we go!! '+err);
-                clientReference.loggedIn = false;
-            }else {
-                // TODO add a proper results check
+    // TODO this looks like bad practise...
+    clientReference.connection.query("SELECT loggedin, lastlogin, UNIX_TIMESTAMP(birthday) as birthday FROM accounts WHERE id = ?",[clientReference.accId], function(err, results) {
+        if(err){
+            console.error(' back to 2007 we go!! '+err);
+            clientReference.loggedIn = false;
+        }else {
+            // TODO add a proper results check
 //                if (!results.next()) {
 //                    console.error("!Results.next this is not supposed to happen");
 //                } else {
 
-                    // TODO add birthday stuff
-                    console.log("UPDATE loggedin results: " + results);
+                // TODO add birthday stuff
+                console.log("UPDATE loggedin results: " + results);
 
 //                    this.state = rs.getInt("loggedin");
-                    clientReference.state = results[0].state;
-                    if (clientReference.state == clientReference.LOGIN_SERVER_TRANSITION) {
-                        if (results[0].lastlogin.getTime() + 30000 < new Date().getTime()) {
-                            clientReference.state = clientReference.LOGIN_NOTLOGGEDIN;
-                            updateLoginState(clientReference.LOGIN_NOTLOGGEDIN);
+                clientReference.state = results[0].state;
+                if (clientReference.state == clientReference.LOGIN_SERVER_TRANSITION) {
+                    if (results[0].lastlogin.getTime() + 30000 < new Date().getTime()) {
+                        clientReference.state = clientReference.LOGIN_NOTLOGGEDIN;
+                        updateLoginState(clientReference.LOGIN_NOTLOGGEDIN);
+                    }
+                }
+
+
+                if (clientReference.state == clientReference.LOGIN_LOGGEDIN) {
+                    clientReference.loggedIn = true;
+                }else if (clientReference.state == clientReference.LOGIN_SERVER_TRANSITION) {
+
+                    clientReference.connection.query("UPDATE accounts SET loggedin = 0 WHERE id = ?",[clientReference.accId], function(err, results) {
+                        if (err) {
+                            console.error(' back to 2007 we go!! ' + err);
+                            clientReference.loggedIn = false;
+                        } else {
+
                         }
-                    }
-
-
-                    if (clientReference.state == clientReference.LOGIN_LOGGEDIN) {
-                        clientReference.loggedIn = true;
-                    }else if (clientReference.state == clientReference.LOGIN_SERVER_TRANSITION) {
-
-                        connection.query("UPDATE accounts SET loggedin = 0 WHERE id = ?",[clientReference.accId], function(err, results) {
-                            if (err) {
-                                console.error(' back to 2007 we go!! ' + err);
-                                clientReference.loggedIn = false;
-                            } else {
-
-                            }
-                        });
-                    } else {
-                        clientReference.loggedIn = false;
-                    }
+                    });
+                } else {
+                    clientReference.loggedIn = false;
+                }
 //                }
-            }
+        }
 
-            connection.end();
-            console.log("Finished mySQL connection.");
-        });
+//        connection.end();
+//        console.log("Finished mySQL connection.");
     });
     return clientReference.state;
 };
@@ -239,44 +202,27 @@ MapleClient.prototype.finishLogin = function(){
 var updateLoginState = function(newstate){
 
     var reference = this;
-    var connection = mysql.createConnection({
-        host : 'localhost',
-        user: 'root',
-        password: 'root',
-        port: '3306',
-        // creative database name eh?
-        database: 'root'
-    });
 
-    // credit goes to moopledev creators for the logic in this method
-    connection.connect(function(err) {
-        if (err) {
-            console.error('error connecting: ' + err.stack);
-            return;
+    console.log('mySQL database connected as id ' + reference.connection.threadId);
+    // TODO this looks like bad practise...
+    reference.connection.query("UPDATE accounts SET loggedin = ?, lastlogin = CURRENT_TIMESTAMP() WHERE id = ?", [newstate, reference.getAccID()], function(err, results) {
+        if(err){
+            console.error(' back to 2007 we go!!');
+        }else{
+            console.log("UPDATE loggedin results: "+results);
         }
 
-        console.log('mySQL database connected as id ' + connection.threadId);
-
-        // TODO this looks like bad practise...
-        connection.query("UPDATE accounts SET loggedin = ?, lastlogin = CURRENT_TIMESTAMP() WHERE id = ?", [newstate, reference.getAccID()], function(err, results) {
-            if(err){
-                console.error(' back to 2007 we go!!');
-            }else{
-                console.log("UPDATE loggedin results: "+results);
-            }
-
-            connection.end();
-            console.log("Finished mySQL connection.");
-        });
-
-        if (newstate == this.LOGIN_NOTLOGGEDIN) {
-            this.loggedIn = false;
-            this.serverTransition = false;
-        } else {
-            this.serverTransition = (newstate == this.LOGIN_SERVER_TRANSITION);
-            this.loggedIn = !this.serverTransition;
-        }
+//        connection.end();
+//        console.log("Finished mySQL connection.");
     });
+
+    if (newstate == this.LOGIN_NOTLOGGEDIN) {
+        this.loggedIn = false;
+        this.serverTransition = false;
+    } else {
+        this.serverTransition = (newstate == this.LOGIN_SERVER_TRANSITION);
+        this.loggedIn = !this.serverTransition;
+    }
 
 };
 
@@ -335,45 +281,29 @@ MapleClient.prototype.acceptToS = function(){
         return true;
     }
 
-    var connection = mysql.createConnection({
-        host : 'localhost',
-        user: 'root',
-        password: 'root',
-        port: '3306',
-        // creative database name eh?
-        database: 'root'
-    });
+    console.log('mySQL database connected as id ' + clientReference.connection.threadId);
 
-    // credit goes to moopledev creators for the logic in this method
-    connection.connect(function(err) {
+    // TODO this looks like bad practise...
+    clientReference.connection.query("SELECT `tos` FROM accounts WHERE id = ?",[clientReference.accId], function (err, results) {
         if (err) {
-            console.error('error connecting: ' + err.stack);
-            return;
-        }
-
-        console.log('mySQL database connected as id ' + connection.threadId);
-
-        // TODO this looks like bad practise...
-        connection.query("SELECT `tos` FROM accounts WHERE id = ?",[clientReference.accId], function (err, results) {
-            if (err) {
-                console.error(' back to 2007 we go!!');
-            } else {
-                if (results != null) {
-                    if (results[0].tos == 1) {
-                        shouldDisconnect = true;
-                    }
+            console.error(' back to 2007 we go!!');
+        } else {
+            if (results != null) {
+                if (results[0].tos == 1) {
+                    shouldDisconnect = true;
                 }
-                connection.query("UPDATE accounts SET tos = 1 WHERE id = ?", [clientReference.accId], function (err, results) {
-                    if (err) {
-                        console.error(' back to 2007 we go!!');
-                    }
-                });
             }
-            connection.end();
-            console.log("Finished mySQL connection.");
-        });
+            clientReference.connection.query("UPDATE accounts SET tos = 1 WHERE id = ?", [clientReference.accId], function (err, results) {
+                if (err) {
+                    console.error(' back to 2007 we go!!');
+                }
+            });
+        }
+//        connection.end();
+//        console.log("Finished mySQL connection.");
+
+        return shouldDisconnect;
     });
-    return shouldDisconnect;
 };
 
 MapleClient.prototype.setDecoderState = function(decoderState){
