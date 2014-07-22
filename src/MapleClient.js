@@ -54,10 +54,12 @@ MapleClient.prototype.loginMaple = function(login, pwd){
    q.nfcall(clientReference.connection.query.bind(clientReference.connection),  "SELECT id, password, salt, gender, banned, gm, pin, pic, characterslots, tos FROM accounts WHERE name = ?",[login])
    .then(function (results) {
            rs = results;
-           // TODO verify that the catch block will verify the existance of rs
+
+           // TODO add an existance check of rs like in the other methods in this class
+
+           // todo finish coding banned stuff later
            if (rs[0][0].banned == 1) {
-               // TODO verify that a return statement will return as if it was returned in the main part of loginMaple
-               return 3;
+               loginok = 3;
            }
 
            clientReference.accId = rs[0][0].id;
@@ -70,9 +72,9 @@ MapleClient.prototype.loginMaple = function(login, pwd){
            salt = rs[0][0].salt;
            tos = rs[0][0].tos;
 
-           q.fcall(getLoginState, clientReference)
-               .then(function () {
-                   gotLoginState = clientReference.state;
+           return getLoginState(clientReference)
+               .then(function (state) {
+                   gotLoginState = state;
 
                    // 0 is LOGIN_NOTLOGGEDIN
                    if (gotLoginState > 0) {
@@ -90,48 +92,48 @@ MapleClient.prototype.loginMaple = function(login, pwd){
                        clientReference.loggedIn = false;
                        loginok = 4;
                    }
+               }).catch(function (error) {
+                   console.error("loginMaple getLoginState error: " + error);
+               });
+       }).then(function() {
+           q.nfcall(clientReference.connection.query.bind(clientReference.connection), "INSERT INTO iplog (accountid, ip) VALUES (?, ?)",[clientReference.accId, clientReference.session.remoteAddress])
+               .then( function (results) {
+                   console.log("inserted results: " + rs[0][0]);
+               }).catch(function(error){
+                  console.error("loginMaple error inserting results: "+error);
+               });
+       }).then(function() {
+           return clientReference.finishLogin(clientReference)
+               .then(function(results){
+                   finishedLogin = results;
+                   // reset the client's loginattempts if login is successful
+                   if (loginok == 0) {
+                       clientReference.loginattempt = 0;
+                   }
 
-                   q.nfcall(clientReference.connection.query.bind(clientReference.connection), "INSERT INTO iplog (accountid, ip) VALUES (?, ?)",[clientReference.accId, clientReference.session.remoteAddress])
-                       .then( function (results) {
-                            console.log("inserted results: "+rs[0][0]);
-                           q.fcall(clientReference.finishLogin, clientReference)
-                               .then(function(results){
-                                   finishedLogin = results;
-                                   // reset the client's loginattempts if login is successful
-                                   if (loginok == 0) {
-                                       clientReference.loginattempt = 0;
-                                   }
+                   console.log("\n\nloginok = "+loginok+" login = "+login+" pwd = "+pwd);
+                   if (loginok != 0) {
+                       console.log("Account: "+clientReference.getAccountName()+ " login failed, most likely disconnecting");
+                       clientReference.announce(MaplePacketCreator.getLoginFailed(loginok));
 
-                                   console.log("\n\nloginok = "+loginok+" login = "+login+" pwd = "+pwd);
+                       //todo test this
+                       console.log("loginMaple about to return in finishLogin promise, not sure what this will do...");
+                       return;
+                   }
 
-
-                                   // fixed nodejs problem with loginok = clientReference.loginMaple(blahblahlabl), because Node is non-blocking when I connect to mySql within clientReference.loginMaple, it will keep going into this method even before loginMaple is done
-                                   if (loginok != 0) {
-                                       console.log("Account: "+clientReference.getAccountName()+ " login failed, most likely disconnecting");
-                                       clientReference.announce(MaplePacketCreator.getLoginFailed(loginok));
-
-                                       return;
-                                   }
-
-                                   // successful login
-                                   if (finishedLogin == 0) {
-                                       clientReference.announce(MaplePacketCreator.getAuthSuccess(clientReference));
-                                       console.log("Account: "+clientReference.getAccountName()+ "logged in successfuly");
-                                       // TODO add idle client disconnection for logged in clients
-                                   } else {
-                                       clientReference.announce(MaplePacketCreator.getLoginFailed(7));
-                                       console.log("Account: "+clientReference.getAccountName()+ "login failed");
-                                   }
-                               }).catch(function (error) {
-                                   console.log("error in (finishLogin) inner loginMaple chaining: " + error);
-                               }).done();
-                       }).catch(function (error) {
-                           console.log("error in (insert) inner loginMaple chaining: " + error);
-                       }).done();
-                }).catch(function (error) {
-                   console.log("error in first inner loginMaple chaining: " + error);
-               }).done();
-        }).catch(function (error) {
+                   // successful login
+                   if (finishedLogin == 0) {
+                       clientReference.announce(MaplePacketCreator.getAuthSuccess(clientReference));
+                       console.log("Account: "+clientReference.getAccountName()+ "logged in successfuly");
+                       // TODO add idle client disconnection for logged in clients
+                   } else {
+                       clientReference.announce(MaplePacketCreator.getLoginFailed(7));
+                       console.log("Account: "+clientReference.getAccountName()+ "login failed");
+                   }
+               }).catch(function (error) {
+                   console.log("loginMaple error in finishLogin promise chaining: " + error);
+               });
+       }).catch(function (error) {
             console.log("error in loginMaple chaining: "+error);
         }).done();
 };
@@ -139,14 +141,11 @@ MapleClient.prototype.loginMaple = function(login, pwd){
 
 // NOTE: here is an example of having chaining with promises inside conditionals
 var getLoginState = function(clientReference){
-
-
     var nextPromise, nextFunction, nextFunctionContent;
-
     // using a tri-state here: 0 means select no function because still not loggedin, 1 means select the updateloginstate function, 2 means update query
     var nextFunctionIsQuery = 0;
     var returnValue;
- q.nfcall(clientReference.connection.query.bind(clientReference.connection), "SELECT loggedin, lastlogin, UNIX_TIMESTAMP(birthday) as birthday FROM accounts WHERE id = ?",[clientReference.accId])
+ return q.nfcall(clientReference.connection.query.bind(clientReference.connection), "SELECT loggedin, lastlogin, UNIX_TIMESTAMP(birthday) as birthday FROM accounts WHERE id = ?",[clientReference.accId])
         .then(function (results) {
 
          if((results[0][0] == null) || (results[0][0] == undefined) || (results[0]
@@ -183,34 +182,32 @@ var getLoginState = function(clientReference){
 
            // NOTE: only the else statement needs denodeify, this first one is just a normal method so I can pass it nextfunction
             if(nextFunctionIsQuery == 1) {
-                q.fcall(clientReference.updateLoginState, 0)
+                // todo not sure if I should be returning or just calling
+                clientReference.updateLoginState(0)
                 .catch(function (error) {
-                    console.log("error in nextFunction chaining: "+error);
-                }).done();
+                    console.log("error in nextFunction chaining updateLoginState: "+error);
+                });
             }
             // only other option is querydb
             else if (nextFunctionIsQuery==2) {
+                // todo not sure if I should be returning or just calling
                 q.nfcall(clientReference.connection.query.bind(clientReference.connection),"UPDATE accounts SET loggedin = 0 WHERE id = ?",[clientReference.accId])
-                .catch(function (error) {
-                    console.log("error in nextFunction chaining: "+error);
-                }).done();
+                    .then(function (results){
+                        console.log("updated results in nextFunction chaining: "+results[0][0]);
+                    })
+                    .catch(function (error) {
+                        console.log("error in nextFunction chaining: "+error);
+                    });
             }
 
             // todo the method is done so I should return the current state as if I were returning from the main part of this method
             // todo to further ensure that this returns as if it were in the main part of this method, I can check to see if this return makes the promise have the value of clientReference.state and then if it does, I can just return the promise
-            clientReference.updateState(clientReference.state);
+            return (clientReference.state);
          }
         }).catch(function (error){
             console.error(' back to 2007 we go!! '+error);
             clientReference.loggedIn = false;
-        }).done();
-
-//    todo MAYBE this will return clientReference.state AFTER the promises have completed
-//    return clientReference.state;
-};
-
-MapleClient.prototype.updateState = function(state){
-    this.state = state;
+        });
 };
 
 MapleClient.prototype.setAccountName = function (login) {
@@ -222,11 +219,9 @@ MapleClient.prototype.getAccountName = function(){
 };
 
 MapleClient.prototype.finishLogin = function(clientReference){
-    // TODO all this.values stuff should go to values, NOT the MapleClient object
-
     var loginResults, hasReturned = false;
     // NOTE: the client keeps going so I need to use promises here
-    return q.fcall(getLoginState, clientReference)
+    return getLoginState(clientReference)
         .then(function (results) {
             loginResults = results;
 
@@ -240,26 +235,26 @@ MapleClient.prototype.finishLogin = function(clientReference){
             if(hasReturned){
                 // do nothing because the function is returning the promise which is really the value 7
             }else{
-                return q.fcall(clientReference.updateLoginState,2)
+                return clientReference.updateLoginState(2)
                     .then(function (){
                         return 0;
                     }).catch(function (error){
                         console.error('updatePromise error: '+error);
-                    }).done();
+                    });
             }
         }).catch(function (error){
             console.error(' finishLogin chaining error: '+error);
-        }).done();
-//    console.log("test finishLogin");
+        });
 };
 
 MapleClient.prototype.updateLoginState = function(newstate){
 
+    // todo ENSURE that this is a real MapleClient object
     var clientReference = this;
     // I'm using promises here to avoid a race condition with getting and updating login states
-    q.nfcall(clientReference.connection.query.bind(clientReference.connection.query), "UPDATE accounts SET loggedin = ?, lastlogin = CURRENT_TIMESTAMP() WHERE id = ?", [newstate, clientReference.accId])
+    return q.nfcall(clientReference.connection.query.bind(clientReference.connection), "UPDATE accounts SET loggedin = ?, lastlogin = CURRENT_TIMESTAMP() WHERE id = ?", [newstate, clientReference.accId])
     .then(function (results){
-            console.log("UPDATE loggedin results: "+results);
+        console.log("UPDATE loggedin results: "+results);
         if (newstate == 0) {
             clientReference.loggedIn = false;
             clientReference.serverTransition = false;
@@ -269,9 +264,7 @@ MapleClient.prototype.updateLoginState = function(newstate){
         }
     }).catch(function (error){
         console.error('updateLoginState error: '+error);
-    }).done();
-
-//    console.log("test updateLoginState");
+    });
 };
 
 MapleClient.prototype.setAccId = function(accountID){
@@ -329,7 +322,7 @@ MapleClient.prototype.acceptToS = function(){
         return true;
     }
 
-    return q.nfcall(clientReference.connection.query.bind(clientReference.connection.query), "SELECT `tos` FROM accounts WHERE id = ?",[clientReference.accId])
+    return q.nfcall(clientReference.connection.query.bind(clientReference.connection), "SELECT `tos` FROM accounts WHERE id = ?",[clientReference.accId])
         .then(function (results){
             console.log("acceptToS results: "+results);
             if (results != null) {
@@ -338,15 +331,17 @@ MapleClient.prototype.acceptToS = function(){
                 }
             }
 
-            // todo I think this usage of then and q.nfcall is wrong, it should probably be nested in the above then
-         }).then(q.nfcall(clientReference.connection.query.bind(clientReference.connection.query), "UPDATE accounts SET tos = 1 WHERE id = ?", [clientReference.accId]), function (results){
-            console.log("acceptToS update results: "+results);
-            return shouldDisconnect;
+            return q.nfcall(clientReference.connection.query.bind(clientReference.connection), "UPDATE accounts SET tos = 1 WHERE id = ?", [clientReference.accId])
+                .then(function(results){
+                    console.log("acceptToS update results: "+results);
+                    return shouldDisconnect;
+                }).catch(function (error){
+                    console.error('acceptToS promise update error: '+error);
+                });
 
         }).catch(function (error){
             console.error('acceptToS promise error: '+error);
-        }).done();
-
+        });
 };
 
 MapleClient.prototype.setDecoderState = function(decoderState){
