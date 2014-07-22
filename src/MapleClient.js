@@ -94,7 +94,7 @@ MapleClient.prototype.loginMaple = function(login, pwd){
                    q.nfcall(clientReference.connection.query.bind(clientReference.connection), "INSERT INTO iplog (accountid, ip) VALUES (?, ?)",[clientReference.accId, clientReference.session.remoteAddress])
                        .then( function (results) {
                             console.log("inserted results: "+rs[0][0]);
-                           q.fcall(clientReference.finishLogin)
+                           q.fcall(clientReference.finishLogin, clientReference)
                                .then(function(results){
                                    finishedLogin = results;
                                    // reset the client's loginattempts if login is successful
@@ -149,7 +149,10 @@ var getLoginState = function(clientReference){
  q.nfcall(clientReference.connection.query.bind(clientReference.connection), "SELECT loggedin, lastlogin, UNIX_TIMESTAMP(birthday) as birthday FROM accounts WHERE id = ?",[clientReference.accId])
         .then(function (results) {
 
-            // TODO verify that the catch block will verify the existance of rs
+         if((results[0][0] == null) || (results[0][0] == undefined) || (results[0]
+             [0].size == 0)){
+             console.log("rs loggedin doesn't exist");
+         }else{
             // TODO add birthday stuff
             console.log("UPDATE loggedin results: " + results[0][0]);
 
@@ -196,7 +199,7 @@ var getLoginState = function(clientReference){
             // todo the method is done so I should return the current state as if I were returning from the main part of this method
             // todo to further ensure that this returns as if it were in the main part of this method, I can check to see if this return makes the promise have the value of clientReference.state and then if it does, I can just return the promise
             clientReference.updateState(clientReference.state);
-
+         }
         }).catch(function (error){
             console.error(' back to 2007 we go!! '+error);
             clientReference.loggedIn = false;
@@ -218,13 +221,12 @@ MapleClient.prototype.getAccountName = function(){
     return this.accountName;
 };
 
-MapleClient.prototype.finishLogin = function(){
+MapleClient.prototype.finishLogin = function(clientReference){
     // TODO all this.values stuff should go to values, NOT the MapleClient object
 
-    var clientReference = this;
     var loginResults, hasReturned = false;
     // NOTE: the client keeps going so I need to use promises here
-    return q.fcall(getLoginState(clientReference))
+    return q.fcall(getLoginState, clientReference)
         .then(function (results) {
             loginResults = results;
 
@@ -255,7 +257,7 @@ MapleClient.prototype.updateLoginState = function(newstate){
 
     var clientReference = this;
     // I'm using promises here to avoid a race condition with getting and updating login states
-    q.nfcall(clientReference.connection.query.bind(clientReference.connection.query), "UPDATE accounts SET loggedin = ?, lastlogin = CURRENT_TIMESTAMP() WHERE id = ?", [newstate, clientReference.getAccID()])
+    q.nfcall(clientReference.connection.query.bind(clientReference.connection.query), "UPDATE accounts SET loggedin = ?, lastlogin = CURRENT_TIMESTAMP() WHERE id = ?", [newstate, clientReference.accId])
     .then(function (results){
             console.log("UPDATE loggedin results: "+results);
         if (newstate == 0) {
