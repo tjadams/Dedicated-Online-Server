@@ -1,6 +1,7 @@
 var mysql = require('mysql');
 var q = require('q');
 var MaplePacketCreator = require('./MaplePacketCreator');
+var MapleAESOFB = require('./MapleAESOFB');
 
 exports.values = {
     // TODO add more opcodes for v83
@@ -28,7 +29,7 @@ var MapleClient = module.exports = function MapleClient(sendCypher, recvCypher, 
     this.characterSlots = 0;
     this.gender = "";
     this.loggedIn = false;
-
+    this.encoded = 0;
     this.state = 0;
     //this.state = LOGIN_NOTLOGGEDIN;
     this.connection = connection;
@@ -98,7 +99,7 @@ MapleClient.prototype.loginMaple = function(login, pwd){
        }).then(function() {
            q.nfcall(clientReference.connection.query.bind(clientReference.connection), "INSERT INTO iplog (accountid, ip) VALUES (?, ?)",[clientReference.accId, clientReference.session.remoteAddress])
                .then( function (results) {
-                   console.log("inserted results: " + rs[0][0]);
+                   console.log("inserted results: " + rs[0]);
                }).catch(function(error){
                   console.error("loginMaple error inserting results: "+error);
                });
@@ -128,7 +129,7 @@ MapleClient.prototype.loginMaple = function(login, pwd){
                        // TODO add idle client disconnection for logged in clients
                    } else {
                        clientReference.announce(MaplePacketCreator.getLoginFailed(7));
-                       console.log("Account: "+clientReference.getAccountName()+ "login failed");
+                       console.log("Account: "+clientReference.getAccountName()+ " login failed");
                    }
                }).catch(function (error) {
                    console.log("loginMaple error in finishLogin promise chaining: " + error);
@@ -288,7 +289,18 @@ MapleClient.prototype.setChannel = function (channel) {
 };
 
 MapleClient.prototype.announce = function (packet){
-    this.session.write(packet);
+    // perform encryption on the packet and pass the client
+
+    // NOTE: for some reason can't directly say this = MapleAESOFB.encode etc.... so I have to set the affected properties
+    var client = MapleAESOFB.encode(packet, this);
+
+    //allocate the changed values from client into this client object
+    this.send = client.send;
+    this.iv = client.iv;
+    this.encoded = client.encoded;
+
+
+    this.session.write(this.encoded);
 };
 
 MapleClient.prototype.getPin = function(){
