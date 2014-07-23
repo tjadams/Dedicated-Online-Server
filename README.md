@@ -4,9 +4,6 @@ Multiplayer-Game-Server
 A Massively Multiplayer Online Role Playing Game server emulator made specifically for MapleStory using NodeJS.  
 This server is for Version 83 of Global MapleStory, also known as v0.83.
 
-*DISCLAIMER:* I am in no way affiliated with MapleStory, Nexon, or Wizet and all of these files have been created by myself.
-This server emulator is for personal/local use only and was created purely for educational purposes. I found out all of the MapleStory packet specific information by searching it up on the internet. 
-
 ## Installation guide ##
 1. Create a SQL schema called root (will be changed to msps in the future)
 2. Download a v0.83 SQL file and execute that in the newly created schema to create the database
@@ -21,3 +18,7 @@ This server emulator is for personal/local use only and was created purely for e
 
 ##Contact##
 If you have any questions or comments, you can e-mail me, Tyler Adams, at daretyleradams@gmail.com
+
+###Disclaimer### 
+*I am in no way affiliated with MapleStory, Nexon, or Wizet and all of these files have been created by myself.
+This server emulator is for personal/local use only and was created purely for educational purposes. I found out all of the MapleStory packet specific information by searching it up on the internet.* 
