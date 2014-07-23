@@ -19,7 +19,7 @@ This server is for Version 83 of Global MapleStory, also known as v0.83.
 ##Contact##
 If you have any questions or comments, you can e-mail me, Tyler Adams, at daretyleradams@gmail.com
 
-##Disclaimer## 
+###Disclaimer 
 
 *I am in no way affiliated with MapleStory, Nexon, or Wizet and all of these files have been created by myself.
 This server emulator is for personal/local use only and was created purely for educational purposes. I learned the MapleStory packet information by searching it up on the internet.* 
