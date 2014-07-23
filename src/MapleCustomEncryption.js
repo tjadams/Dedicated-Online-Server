@@ -42,6 +42,41 @@ MapleCustomEncryption.decryptData = function (data){
     return data;
 };
 
+MapleCustomEncryption.encryptData = function(data){
+    for (var j = 0; j < 6; j++) {
+        var remember = 0;
+        var dataLength = (data.length & 0xFF);
+        if (j % 2 == 0) {
+            for (var i = 0; i < data.length; i++) {
+                var cur = data[i];
+                cur = rollLeft(cur, 3);
+                cur += dataLength;
+                cur ^= remember;
+                remember = cur;
+                cur = rollRight(cur,  dataLength & 0xFF);
+                cur = ( ((~cur) & 0xFF));
+                cur += 0x48;
+                dataLength--;
+                data[i] = cur;
+            }
+        } else {
+            for (var i = data.length - 1; i >= 0; i--) {
+                var cur = data[i];
+                cur = rollLeft(cur, 4);
+                cur += dataLength;
+                cur ^= remember;
+                remember = cur;
+                cur ^= 0x13;
+                cur = rollRight(cur, 3);
+                dataLength--;
+                data[i] = cur;
+            }
+        }
+    }
+    return data;
+};
+
+
 var rollLeft = function(cur,count){
     var tmp = cur & 0xFF;
     tmp = tmp << (count % 8);
