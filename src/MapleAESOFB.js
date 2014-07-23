@@ -1,4 +1,5 @@
 var crypto = require('crypto');
+var MapleCustomEncryption = require('./MapleCustomEncryption');
 //TODO comment my code
 
 var funnyBytes = new Buffer([ 0xEC,  0x3F,  0x77,  0xA4,  0x45,  0xD0,  0x71,  0xBF,  0xB7,  0x98,  0x20,  0xFC,
@@ -82,7 +83,7 @@ MapleAESOFB.prototype.crypt = function(packet){
         var buff = new Buffer(myIv.length);
         for(var i = 0; i < myIv.length; i++){
               buff[i] = myIv[i];
-            console.log(buff[i]);
+//            console.log(buff[i]);
         }
 
         myIv = buff;
@@ -97,10 +98,10 @@ MapleAESOFB.prototype.crypt = function(packet){
                 // update the IV (yay!)
                 newIv = aes.update(newIv);
 
-                console.log("\n\nnewIv");
+//                console.log("\n\nnewIv");
                 for (var j = 0; j < myIv.length; j++) {
                     myIv[j] = newIv[j];
-                    console.log(newIv[j]);
+//                    console.log(newIv[j]);
                 }
             }
             packet[x] ^= myIv[(x - start) % myIv.length];
@@ -114,6 +115,64 @@ MapleAESOFB.prototype.crypt = function(packet){
     return packet;
 };
 
+MapleAESOFB.prototype.getPacketHeaderInt = function (length){
+
+    var iiv = (this.iv[3]) & 0xFF;
+    iiv |= (this.iv[2] << 8) & 0xFF00;
+    iiv ^= this.mapleVersion;
+    var mlength = ((length << 8) & 0xFF00) | (length >>> 8);
+    var xoredIv = iiv ^ mlength;
+    var ret = new Buffer(4);
+    ret[0] = ((iiv >>> 8) & 0xFF);
+    ret[1] = (iiv & 0xFF);
+    ret[2] = ((xoredIv >>> 8) & 0xFF);
+    ret[3] = (xoredIv & 0xFF);
+
+    return ret;
+};
+
+MapleAESOFB.encode = function(packet, client){
+    // todo may need to wrap this in a while loop like my doDecode method
+
+    console.log("encoding packets");
+
+    // something may happen to the client in the mean time
+    if (client != null) {
+        var unencrypted = new Buffer(packet.length);
+        for(var i = 0; i < packet.length; i++){
+            unencrypted[i] = packet[i];
+        }
+
+        // add some array size for the 4 byte packet header
+       var ret = new Buffer(unencrypted.length + 4);
+
+        // todo header is a buffer
+        // todo getPacketHeader(int)
+        var header = client.send.getPacketHeaderInt(unencrypted.length);
+
+        // encrypt the unencrypted but don't make a new variable
+        unencrypted = MapleCustomEncryption.encryptData(unencrypted);
+
+        // todo May need to lock these next 3 lines of code but I don't think I need to use mutex lock or any locking because Node isn't multi-threaded and there is just no need since none of thse values are being edited
+
+        client.send.crypt(unencrypted);
+       for(var i = 0; i < 4; i++){
+           ret[i] = header[i];
+       }
+
+        for(var i = 0; i < unencrypted.length; i++){
+            ret[4+i] = unencrypted[i];
+        }
+        client.encoded = ret;
+
+    } else {
+        // send the same message received back to the client
+        client.encoded = packet;
+    }
+
+    return client;
+};
+
 
 MapleAESOFB.prototype.updateIv = function(){
     this.iv = getNewIv(this.iv);
@@ -121,9 +180,11 @@ MapleAESOFB.prototype.updateIv = function(){
 
 var getNewIv = function(oldIv){
     // 4 byte ("double word") used for shuffling the IV. This key was found inside the MapleStory client.
+    console.log("\n\n\ngetNewIv results: ");
     var dwDefaultKey = new Buffer ([0xf2, 0x53, 0x50, 0xc6]);
     for (var x = 0; x < 4; x++) {
         funnyShift(oldIv[x], dwDefaultKey);
+         console.log(dwDefaultKey[x]);
     }
     return dwDefaultKey;
 };
