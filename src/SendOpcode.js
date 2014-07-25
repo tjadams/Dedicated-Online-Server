@@ -8,7 +8,13 @@ function SendOpcode() {
 var opcodes = {
     // TODO add more opcodes for v83
     CHECK_PINCODE: 0x06,
-    LOGIN_STATUS: 0x00
+    LOGIN_STATUS: 0x00,
+    // 0x0A
+    SERVERLIST:  10,
+    // 0x1A
+    LAST_CONNECTED_WORLD:  26,
+    // 0x1b
+    RECOMMENDED_WORLD_MESSAGE: 27
 
 };
 
