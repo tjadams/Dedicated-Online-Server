@@ -129,6 +129,13 @@ var getAuthSuccess = function(c){
     return buffer;
 };
 
+var getServerStatus = function(status){
+    var buffer = new Buffer(0);
+    buffer = writeShort(SendOpcode.opcodes.SERVERSTATUS, buffer);
+    buffer = writeShort(status, buffer);
+
+    return buffer;
+};
 
 function writeBool(b, buffer){
     buffer = write(b ? 1 : 0, buffer);
@@ -289,6 +296,8 @@ module.exports = {
     selectWorld: selectWorld,
     sendRecommended: sendRecommended,
     getServerList: getServerList,
-    getEndOfServerList: getEndOfServerList
+    getEndOfServerList: getEndOfServerList,
+    readShort: readShort,
+    getServerStatus: getServerStatus
 
 };

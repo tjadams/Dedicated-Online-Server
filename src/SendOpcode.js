@@ -14,7 +14,8 @@ var opcodes = {
     // 0x1A
     LAST_CONNECTED_WORLD:  26,
     // 0x1b
-    RECOMMENDED_WORLD_MESSAGE: 27
+    RECOMMENDED_WORLD_MESSAGE: 27,
+    SERVERSTATUS: 0x03
 
 };
 
