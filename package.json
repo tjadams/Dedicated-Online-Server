@@ -6,7 +6,7 @@
     "start": "node ./app"
   },
   "dependencies": {
-      "mysql" : "2.3.x",
+      "mysql" : "2.4.x",
       "underscore" : "1.6.x",
       "q" : "1.0.x"
   }
