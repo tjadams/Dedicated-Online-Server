@@ -9,19 +9,18 @@ var MapleAESOFB = require('./src/MapleAESOFB.js');
 var MaplePacketCreator = require('./src/MaplePacketCreator.js');
 var RecvOpcode = require('./src/RecvOpcode.js');
 var MapleCustomEncryption = require('./src/MapleCustomEncryption.js');
+var World = require('./src/world.js');
 
-//var MaplePacketHandler = require('./src/MaplePacketHandler.js'); // TODO add inheritance
+// TODO add inheritance
+//var MaplePacketHandler = require('./src/MaplePacketHandler.js');
 var LoginPasswordHandler = require('./src/handlers/LoginPasswordHandler.js');
 var AcceptToSHandler = require('./src/handlers/AcceptToSHandler.js');
 var AfterLoginHandler = require('./src/handlers/AfterLoginHandler.js');
+var ServerlistRequestHandler = require('./src/handlers/ServerlistRequestHandler.js');
 
 var HOST = '127.0.0.1';
 var PORT = 8484;
 var MAPLEVERSION = 83;
-
-
-// TODO current: AfterLoginHandler class
-
 
 ///*
 
@@ -85,7 +84,7 @@ var handlers = [maxRecvOp + 1];
 handlers[RecvOpcode.opcodes.LOGIN_PASSWORD] = new LoginPasswordHandler();
 handlers[RecvOpcode.opcodes.ACCEPT_TOS] = new AcceptToSHandler();
 handlers[RecvOpcode.opcodes.AFTER_LOGIN] = new AfterLoginHandler();
-
+handlers[RecvOpcode.opcodes.SERVERLIST_REQUEST] = new ServerlistRequestHandler();
 // TODO initialize channel MaplePacketHandlers
 
 // TODO I need something like a TimerManager to constantly update the MapRespawn
@@ -93,6 +92,15 @@ handlers[RecvOpcode.opcodes.AFTER_LOGIN] = new AfterLoginHandler();
 // TODO load skills and items from .wz files
 
 // todo load worlds and channels
+// loading worlds (only one for now)
+var worlds = [1];
+// worldID, flag, eventmessage, exprate,droprate, mesorate, bossdroprate
+worlds[0] = new World(0, 2, "heyyo", 1, 1, 1, 1);
+console.log("done loading world 0");
+
+exports.worldRecommendedList = worlds;
+
+
 
 var server = net.createServer();
 server.listen(PORT, HOST);
@@ -104,6 +112,15 @@ var decryptedPacket;
 var beingDecrypted;
 
 var client;
+var instance = this;
+
+exports.getWorlds = function(){
+   return worlds;
+};
+
+exports.getInstance = function(){
+    return instance;
+};
 
 // handle first connection stuff (if this is called multiple times I'll need to add more logic)
 server.on('connection', function(sock) {
@@ -326,8 +343,7 @@ function updateDecodeValues(client, decoderState, decoderPacketLength, buffer){
 
 
 function write(sock, packets){
-
-    // TODO maybe do some packet encoding/decoding later
+// todo Looks like firstConnect doesn't need to be encrypted.
    sock.write(packets);
    console.log("Wrote to client: "+sock.remoteAddress+":"+sock.remotePort);
 }
