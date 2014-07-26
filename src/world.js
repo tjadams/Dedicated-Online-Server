@@ -2,15 +2,24 @@
  * Created by Tyler Adams on 29/06/2014.
  */
 
-var World = module.exports = function World(stuff){
-   this.id = 0;
-   this.flag = 0;
-   this.eventmessage = "";
-   this.channels = null;
+var World = module.exports = function World(worldID, flag, eventmessage, exprate,droprate, mesorate, bossdroprate){
+   this.id = worldID;
+   this.flag = flag;
+   this.eventmsg = eventmessage;
+   this.droprate = droprate;
+   this.mesorate = mesorate;
+   this.bossdroprate = bossdroprate;
+
+    // initialize the channels to be some type with a length of zero so it doesn't show up in the worlds list yet until I add channels in app.js
+    // todo may need to be ""
+    this.channels = 0;
+   this.connectedClients = 0;
+   this.reccomendedMessage = "sup";
+    // todo look at party and messenger stuff
 };
 
 World.prototype.toString = function(){
-    return "AcceptToSHandler";
+    return "World";
 };
 
 module.exports = World;
