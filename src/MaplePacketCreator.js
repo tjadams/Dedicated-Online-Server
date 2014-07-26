@@ -3,10 +3,78 @@
  */
 
 var SendOpcode = require('./SendOpcode.js');
+var ServerConstants = require('./ServerConstants.js');
 
 
 // NOTE: buffer.write() was giving me incorrect values. Buffer.concat() works better.
 function MaplePacketCreator()  {
+
+};
+
+// int, string, int, stirng,  list<channel>
+var getServerList = function(serverId, serverName, flag, eventmsg, channelLoad){
+    var buffer = new Buffer(0);
+    buffer = writeShort(SendOpcode.opcodes.SERVERLIST , buffer);
+    buffer = write(serverId, buffer);
+    buffer = writeMapleAsciiString(serverName, buffer);
+    buffer = write(flag, buffer);
+    buffer = writeMapleAsciiString(eventmsg, buffer);
+    // rate modifier
+    buffer = write(100, buffer);
+    // event xp
+    buffer = write(0, buffer);
+    // rate modifier
+    buffer = write(100, buffer);
+    // drop rate
+    buffer = write(0, buffer);
+    buffer = write(0, buffer);
+    buffer = write(channelLoad.length, buffer);
+    for (var i = 0; i < channelLoad.length; i++){
+        var ch = channelLoad[i];
+        buffer = writeMapleAsciiString(serverName + "-" + ch.id, buffer);
+        buffer = writeInt((ch.connectedClients * 1200) / ServerConstants.CHANNEL_LOAD, buffer);
+        buffer = write(1, buffer);
+        buffer = writeShort(ch.id - 1, buffer);
+    }
+    buffer = writeShort(0, buffer);
+
+    console.log("getServerList values: "+serverId+" "+serverName+" "+flag+" "+eventmsg+" "+channelLoad);
+    logBuffer("getServerList", buffer);
+    return buffer;
+
+};
+
+var getEndOfServerList = function(){
+    var buffer = new Buffer(0);
+    buffer = writeShort(SendOpcode.opcodes.SERVERLIST, buffer);
+    buffer = write(0xFF, buffer);
+    logBuffer("getEndOfServerList", buffer);
+    return buffer;
+};
+
+var selectWorld = function( world){
+
+   var buffer = new Buffer(0);
+   buffer = writeShort(SendOpcode.opcodes.LAST_CONNECTED_WORLD, buffer);
+   buffer = writeInt(world, buffer);
+    logBuffer("selectWorld", buffer);
+   return buffer;
+};
+
+// list<pair<integer,string>>
+var sendRecommended = function(worlds){
+    var buffer = new Buffer(0);
+    buffer = writeShort(SendOpcode.opcodes.RECOMMENDED_WORLD_MESSAGE, buffer);
+    buffer = write(worlds.length, buffer);//size
+//    for (Iterator<Pair<Integer, String>> it = worlds.iterator(); it.hasNext();) {
+     for(var i = 0; i < worlds.length; i++){
+        var world = worlds[i];
+        buffer = writeInt(world.id, buffer);
+        buffer = writeMapleAsciiString(world.reccomendedMessage, buffer);
+    }
+
+    logBuffer("sendRecommended",buffer);
+    return buffer;
 
 };
 
@@ -25,7 +93,7 @@ var getHello = function (MAPLEVERSION, ivSend, ivRecv) {
 
 var getLoginFailed = function(loginok){
     var buffer = new Buffer(0);
-    buffer = writeShort(SendOpcode.getOpcodes().LOGIN_STATUS, buffer);
+    buffer = writeShort(SendOpcode.opcodes.LOGIN_STATUS, buffer);
     buffer = write(loginok, buffer);
     buffer = write(0, buffer);
     buffer = writeInt(0, buffer);
@@ -35,7 +103,8 @@ var getLoginFailed = function(loginok){
 
 var getAuthSuccess = function(c){
     var buffer = new Buffer(0);
-    buffer = writeShort(SendOpcode.getOpcodes().LOGIN_STATUS, buffer);
+    buffer = writeShort(SendOpcode.opcodes.LOGIN_STATUS, buffer);
+//    console.log(buffer.toArray);
     buffer = writeInt(0, buffer);
     buffer = writeShort(0, buffer);
     buffer = writeInt(c.accId, buffer);
@@ -54,6 +123,8 @@ var getAuthSuccess = function(c){
     buffer = writeLong(0, buffer);
     buffer = writeInt(0, buffer);
     buffer = writeShort(2, buffer);
+
+    logBuffer("\n\n\nin getAuthSuccess", buffer);
 
     return buffer;
 };
@@ -214,5 +285,10 @@ module.exports = {
     requestPinAfterFailure: requestPinAfterFailure,
     getLoginFailed: getLoginFailed,
     getAuthSuccess: getAuthSuccess,
-    readByte: readByte
+    readByte: readByte,
+    selectWorld: selectWorld,
+    sendRecommended: sendRecommended,
+    getServerList: getServerList,
+    getEndOfServerList: getEndOfServerList
+
 };
