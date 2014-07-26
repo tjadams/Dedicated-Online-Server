@@ -14,6 +14,13 @@ function ServerlistRequestHandler(){
 ServerlistRequestHandler.prototype.handlePacket = function(packet, c){
     console.log("ServerlistRequestHandler handlePacket");
 
+//    if(c.session.writable) {
+//        c.session.write(MaplePacketCreator.getEndOfServerList());
+//    }else{
+//        console.error("getEndOfServerList is not writable");
+//    }
+
+    // NOTE: looks like I don't NEED asynchronous output yet with an async/promise library
     var server = Server.getInstance();
 
     var worlds = server.getWorlds();
@@ -25,10 +32,9 @@ ServerlistRequestHandler.prototype.handlePacket = function(packet, c){
     c.announce(MaplePacketCreator.getEndOfServerList());
     c.announce(MaplePacketCreator.selectWorld(0));
     c.announce(MaplePacketCreator.sendRecommended(server.worldRecommendedList));
-
 };
 
-// TODO EDIT ALL LOGIC
+// TODO EDIT STATE LOGIC
 ServerlistRequestHandler.prototype.validateState = function(client){
     return true;
 };

@@ -291,6 +291,12 @@ MapleClient.prototype.setChannel = function (channel) {
 MapleClient.prototype.announce = function (packet){
     // perform encryption on the packet and pass the client
 
+    console.log("\nannouncing packet:");
+    for(var i = 0; i<packet.length; i++){
+        console.log(packet[i]);
+    }
+    console.log("done announcing packet\n");
+
     // NOTE: for some reason can't directly say this = MapleAESOFB.encode etc.... so I have to set the affected properties
     var client = MapleAESOFB.encode(packet, this);
 
@@ -298,9 +304,28 @@ MapleClient.prototype.announce = function (packet){
     this.send = client.send;
     this.iv = client.iv;
     this.encoded = client.encoded;
+//    this.header = client.header;
+//    this.encrypted = client.unencrypted;
+//
+//
+    console.log("\nencode");
+    for(var i = 0;i<this.encoded.length; i++){
+        console.log(this.encoded[i]);
+    }
+    console.log("end encode\n");
+//
+//    this.session.setNoDelay(true) ;
+//      this.session = client.session;
+//    this.session.writable = true;
+//    if(this.session.writable) {
+        this.session.write(this.encoded);
+//        this.session.write(this.header);
+//        this.session.write(this.encrypted);
+//    }else{
+//        console.error("session not writable");
+//    }
 
 
-    this.session.write(this.encoded);
 };
 
 MapleClient.prototype.getPin = function(){

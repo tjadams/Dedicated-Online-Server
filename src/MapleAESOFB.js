@@ -134,7 +134,7 @@ MapleAESOFB.prototype.getPacketHeaderInt = function (length){
 MapleAESOFB.encode = function(packet, client){
     // todo may need to wrap this in a while loop like my doDecode method
 
-    console.log("encoding packets");
+//    console.log("encoding packets");
 
     // something may happen to the client in the mean time
     if (client != null) {
@@ -163,6 +163,9 @@ MapleAESOFB.encode = function(packet, client){
         for(var i = 0; i < unencrypted.length; i++){
             ret[4+i] = unencrypted[i];
         }
+
+//        client.header = header;
+//        client.unencrypted = unencrypted;
         client.encoded = ret;
 
     } else {
@@ -180,12 +183,13 @@ MapleAESOFB.prototype.updateIv = function(){
 
 var getNewIv = function(oldIv){
     // 4 byte ("double word") used for shuffling the IV. This key was found inside the MapleStory client.
-    console.log("\n\n\ngetNewIv results: ");
+//    console.log("\n\n\ngetNewIv results: ");
     var dwDefaultKey = new Buffer ([0xf2, 0x53, 0x50, 0xc6]);
     for (var x = 0; x < 4; x++) {
         funnyShift(oldIv[x], dwDefaultKey);
-         console.log(dwDefaultKey[x]);
+//         console.log(dwDefaultKey[x]);
     }
+//    console.log("end of getNewIv results");
     return dwDefaultKey;
 };
 
