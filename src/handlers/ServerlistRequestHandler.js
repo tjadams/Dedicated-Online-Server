@@ -11,7 +11,7 @@ function ServerlistRequestHandler(){
 
 };
 
-ServerlistRequestHandler.prototype.handlePacket = function(packet, client){
+ServerlistRequestHandler.prototype.handlePacket = function(packet, c){
     console.log("ServerlistRequestHandler handlePacket");
 
     var server = Server.getInstance();
@@ -20,7 +20,7 @@ ServerlistRequestHandler.prototype.handlePacket = function(packet, client){
     var world;
     for (var i = 0; i < worlds.length; i++) {
         world = worlds[i];
-        c.announce(MaplePacketCreator.getServerList(world.id, ServerConstants.WORLD_NAMES[world.id], world.flag, world.eventmessage, world.channels));
+        c.announce(MaplePacketCreator.getServerList(world.id, ServerConstants.WORLD_NAMES[world.id], world.flag, world.eventmsg, world.channels));
     }
     c.announce(MaplePacketCreator.getEndOfServerList());
     c.announce(MaplePacketCreator.selectWorld(0));
