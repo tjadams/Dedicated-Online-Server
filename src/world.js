@@ -11,8 +11,7 @@ var World = module.exports = function World(worldID, flag, eventmessage, exprate
    this.bossdroprate = bossdroprate;
 
     // initialize the channels to be some type with a length of zero so it doesn't show up in the worlds list yet until I add channels in app.js
-    // todo may need to be ""
-    this.channels = 0;
+    this.channels = [];
    this.connectedClients = 0;
    this.reccomendedMessage = "sup";
     // todo look at party and messenger stuff

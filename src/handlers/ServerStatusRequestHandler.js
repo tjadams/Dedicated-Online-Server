@@ -21,15 +21,12 @@ ServerStatusRequestHandler.prototype.handlePacket = function(packet, c) {
     var channels = Server.getInstance().getWorlds()[world].channels;
     var ch;
 
-    // if channels is not set to it's initial value
-    if (channels != 0) {
-        for (var i = 0; i < channels.length; i++) {
-            ch = channels[i];
-            // todo: When creating Channel class, add the getConnectedClients method
-            num += ch.getConnectedClients();
-        }
-     }
-    if (num >= ServerConstants.CHANNEL_LOAD) {
+    for (var i = 0; i < channels.length; i++) {
+        ch = channels[i];
+        // todo: When creating Channel class, add the getConnectedClients method
+        num += ch.getConnectedClients();
+    }
+if (num >= ServerConstants.CHANNEL_LOAD) {
         status = 2;
     } else if (num >= ServerConstants.CHANNEL_LOAD * .8) {
         status = 1;
