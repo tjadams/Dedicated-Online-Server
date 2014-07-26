@@ -149,17 +149,25 @@ server.on('connection', function(sock) {
             console.log("decodeTimes: "+ (decodeTimes++));
         }
 
+//        sock.pause();
         handleDecodedPackets();
+//        sock.resume();
     });
 
-    sock.on('error', function(data) {
-        console.error("error thrown by client: "+data);
+    sock.on('error', function() {
+        console.error("error:");
+        console.error("%j", arguments);
+
+//        sock.end();
+//        sock.destroy();
     });
 
     sock.on('close', function(data) {
         // remove this client from the list of connected clients
         for(var i = 0; i < clients.length; i++){
             if(clients[i].session == sock){
+//                sock.end();
+//                sock.destroy();
                 console.log(sock.remoteAddress +':'+ sock.remotePort+' has disconnected with data: '+data);
                 clients = _.without(clients,clients[i]);
             }
@@ -192,16 +200,16 @@ function handleDecodedPackets(){
     }
 
     var packetHandler = matchedHandler;
-    console.log("packetHandler is: "+packetHandler);
+//    console.log("packetHandler is: "+packetHandler);
     if(registered) {
         if (packetHandler.validateState(client)) {
             // handle the packet not including the opcode
             var packet = decryptedPacket.slice(2, decryptedPacket.length);
 
-            console.log("\nPrinting decrypted packet content");
-            for(var i  = 0; i <decryptedPacket.length; i++){
-                console.log(decryptedPacket[i]);
-            }
+//            console.log("\nPrinting decrypted packet content");
+//            for(var i  = 0; i <decryptedPacket.length; i++){
+//                console.log(decryptedPacket[i]);
+//            }
 
             packetHandler.handlePacket(packet, client);
         }
@@ -276,11 +284,16 @@ function doDecode(buffer, client)
 
 
 
+        // note: sendCrypto this.iv was probably modified so receiveCrypto may need the same iv
+//        NO THIS IS WRONG client.receive.iv = client.send.iv;
+
         // check to see if the header of this packet contains information we want
         // in this case, we are calling the int version of checkPacket
         if (!client.getReceiveCrypto().checkPacketInt(packetHeader)) {
-            console.log("\n\nDestroying socket session with client: "+client.session.remoteAddress+" due to packetHeader: "+packetHeader);
-            client.session.destroy();
+//            console.log("\n\nDestroying socket session with client: "+client.session.remoteAddress+" due to packetHeader: "+packetHeader);
+//            client.session.destroy();
+            // NOTE: removing the session destruction allowed me to ignore packetHeader -738843410 and move on to the worlds screen
+            console.error("NOTE: packetHeader is invalid, potential error.");
             decoderState = false;
             updateDecodeValues(client, decoderState, decoderPacketLength, buffer);
             return false;
