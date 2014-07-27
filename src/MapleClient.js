@@ -2,6 +2,8 @@ var mysql = require('mysql');
 var q = require('q');
 var MaplePacketCreator = require('./MaplePacketCreator');
 var MapleAESOFB = require('./MapleAESOFB');
+var CharNameAndId = require('./CharNameAndId.js');
+//var MapleCharacter = require('./MapleCharacter.js');
 
 exports.values = {
     // TODO add more opcodes for v83
@@ -26,7 +28,7 @@ var MapleClient = module.exports = function MapleClient(sendCypher, recvCypher, 
     this.gmlevel = 0;
     this.pin = 0;
     this.pic = 0;
-    this.characterSlots = 0;
+    this.characterSlots = 3;
     this.gender = "";
     this.loggedIn = false;
     this.encoded = 0;
@@ -379,6 +381,38 @@ MapleClient.prototype.acceptToS = function(){
         }).catch(function (error){
             console.error('acceptToS promise error: '+error);
         });
+};
+
+MapleClient.prototype.loadCharacters = function(serverId){
+    var chars = [15];
+    var clientsChars = this.loadCharactersInternal(serverId);
+    var cni;
+    for (var i = 0; i<clientsChars.length; i++) {
+        cni = clientsChars[i];
+        chars.add(MapleCharacter.loadCharFromDB(cni.id, this, false));
+    }
+    return chars;
+};
+
+MapleClient.prototype.loadCharactersInternal = function(serverId){
+    var chars = [15];
+    var clientReference = this;
+
+    return q.nfcall(clientReference.connection.query.bind(clientReference.connection), "SELECT id, name FROM characters WHERE accountid = ? AND world = ?", [clientReference.accId, serverId])
+        .then(function (rs){
+            //todo uncomment
+//            while (rs.next()) {
+//                chars.add(new CharNameAndId(rs.getString("name"), rs.getInt("id")));
+//            }
+            return chars;
+        }).catch(function (error){
+            console.error('loadCharactersInternal error: '+error);
+        });
+};
+
+
+MapleClient.prototype.sendCharList = function(world){
+    this.announce(MaplePacketCreator.getCharList(this, world));
 };
 
 MapleClient.prototype.setDecoderState = function(decoderState){

@@ -137,6 +137,29 @@ var getServerStatus = function(status){
     return buffer;
 };
 
+var getCharList = function(c, serverId){
+    var buffer = new Buffer(0);
+    buffer = writeShort(SendOpcode.opcodes.CHARLIST, buffer);
+    buffer = write(0,buffer);
+//    var chars = c.loadCharacters(serverId);
+//    buffer = write(chars.length, buffer);
+    buffer = write(0, buffer);
+    var chr;
+//    for (var i = 0; i<chars.length; i++) {
+//        chr = chars[i];
+//        addCharEntry(buffer, chr, false);
+//    }
+//    if (ServerConstants.ENABLE_PIC) {
+//        mplew.write(c.getPic() == null || c.getPic().length() == 0 ? 0 : 1);
+//    } else {
+        buffer = write(2, buffer);
+//    }
+
+    buffer = writeInt(c.characterSlots, buffer);
+    return buffer;
+
+};
+
 function writeBool(b, buffer){
     buffer = write(b ? 1 : 0, buffer);
 
@@ -298,6 +321,7 @@ module.exports = {
     getServerList: getServerList,
     getEndOfServerList: getEndOfServerList,
     readShort: readShort,
-    getServerStatus: getServerStatus
+    getServerStatus: getServerStatus,
+    getCharList: getCharList
 
 };

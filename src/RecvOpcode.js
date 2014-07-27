@@ -13,7 +13,8 @@ var opcodes = {
     AFTER_LOGIN: 0x09,
     // it's really 0x0b which is 11
     SERVERLIST_REQUEST: 11,
-    SERVERSTATUS_REQUEST: 0x06
+    SERVERSTATUS_REQUEST: 0x06,
+    CHARLIST_REQUEST: 0x05
 
 };
 
@@ -28,6 +29,7 @@ var getOpcodes = function (){
     // it's really 0x0b which is 11
     array[3] = 11;
     array[4] = 0x06;
+    array[5] = 0x05;
 
     return array;
 };

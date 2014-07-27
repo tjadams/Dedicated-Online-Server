@@ -19,6 +19,8 @@ var AcceptToSHandler = require('./src/handlers/AcceptToSHandler.js');
 var AfterLoginHandler = require('./src/handlers/AfterLoginHandler.js');
 var ServerlistRequestHandler = require('./src/handlers/ServerlistRequestHandler.js');
 var ServerStatusRequestHandler = require('./src/handlers/ServerStatusRequestHandler.js');
+var CharlistRequestHandler = require('./src/handlers/CharlistRequestHandler.js');
+
 
 var HOST = '127.0.0.1';
 var PORT = 8484;
@@ -88,6 +90,7 @@ handlers[RecvOpcode.opcodes.ACCEPT_TOS] = new AcceptToSHandler();
 handlers[RecvOpcode.opcodes.AFTER_LOGIN] = new AfterLoginHandler();
 handlers[RecvOpcode.opcodes.SERVERLIST_REQUEST] = new ServerlistRequestHandler();
 handlers[RecvOpcode.opcodes.SERVERSTATUS_REQUEST] = new ServerStatusRequestHandler();
+handlers[RecvOpcode.opcodes.CHARLIST_REQUEST] = new CharlistRequestHandler();
 // TODO initialize channel MaplePacketHandlers
 
 // TODO I need something like a TimerManager to constantly update the MapRespawn
