@@ -10,6 +10,7 @@ var MaplePacketCreator = require('./src/MaplePacketCreator.js');
 var RecvOpcode = require('./src/RecvOpcode.js');
 var MapleCustomEncryption = require('./src/MapleCustomEncryption.js');
 var World = require('./src/world.js');
+var Channel = require('./src/Channel.js');
 
 // TODO add inheritance
 //var MaplePacketHandler = require('./src/MaplePacketHandler.js');
@@ -93,14 +94,6 @@ handlers[RecvOpcode.opcodes.SERVERSTATUS_REQUEST] = new ServerStatusRequestHandl
 
 // TODO load skills and items from .wz files
 
-// todo load worlds and channels
-// loading worlds (only one for now)
-var worlds = [1];
-// worldID, flag, eventmessage, exprate,droprate, mesorate, bossdroprate
-worlds[0] = new World(0, 2, "heyyo", 1, 1, 1, 1);
-console.log("done loading world 0");
-
-exports.worldRecommendedList = worlds;
 
 
 
@@ -120,9 +113,30 @@ exports.getWorlds = function(){
    return worlds;
 };
 
+exports.getHOST = function(){
+    return HOST;
+};
+
+exports.getClients = function(){
+    return clients;
+};
+
 exports.getInstance = function(){
     return instance;
 };
+
+// todo load worlds and channels
+// loading worlds (only one for now)
+var worlds = [1];
+// worldID, flag, eventmessage, exprate,droprate, mesorate, bossdroprate
+worlds[0] = new World(0, 2, "heyyo", 1, 1, 1, 1);
+var ch = new Channel(0,1);
+ch.init();
+worlds[0].addChannel(ch);
+console.log("done loading world 0");
+exports.worldRecommendedList = worlds;
+
+
 
 // handle first connection stuff (if this is called multiple times I'll need to add more logic)
 server.on('connection', function(sock) {

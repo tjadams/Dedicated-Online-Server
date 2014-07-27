@@ -17,6 +17,10 @@ var World = module.exports = function World(worldID, flag, eventmessage, exprate
     // todo look at party and messenger stuff
 };
 
+World.prototype.addChannel = function(channel){
+  this.channels.push(channel);
+};
+
 World.prototype.toString = function(){
     return "World";
 };
