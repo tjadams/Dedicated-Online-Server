@@ -400,10 +400,9 @@ MapleClient.prototype.loadCharactersInternal = function(serverId){
 
     return q.nfcall(clientReference.connection.query.bind(clientReference.connection), "SELECT id, name FROM characters WHERE accountid = ? AND world = ?", [clientReference.accId, serverId])
         .then(function (rs){
-            //todo uncomment
-//            while (rs.next()) {
-//                chars.add(new CharNameAndId(rs.getString("name"), rs.getInt("id")));
-//            }
+            for(var i = 0; i < rs[0].length; i++){
+                chars[i] = (new CharNameAndId(rs[0][i].name, rs[0][i].id));
+            }
             return chars;
         }).catch(function (error){
             console.error('loadCharactersInternal error: '+error);

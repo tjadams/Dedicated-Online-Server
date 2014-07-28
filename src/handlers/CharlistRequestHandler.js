@@ -15,9 +15,13 @@ CharlistRequestHandler.prototype.handlePacket = function(packet, c) {
     console.log("CharlistRequestHandler handlePacket");
 
     // second byte of the packet is the world
-    MaplePacketCreator.readByte(packet);
+//    MaplePacketCreator.readByte(packet);
+    // don't need the first byte
+    packet = packet.slice(1,packet.length);
     var world = MaplePacketCreator.readByte(packet);
     c.setWorld(world);
+    // slice again to get to the next readByte
+    packet = packet.slice(1,packet.length);
     c.setChannel(MaplePacketCreator.readByte(packet) + 1);
     c.sendCharList(world);
 };

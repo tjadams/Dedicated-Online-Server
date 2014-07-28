@@ -141,9 +141,12 @@ var getCharList = function(c, serverId){
     var buffer = new Buffer(0);
     buffer = writeShort(SendOpcode.opcodes.CHARLIST, buffer);
     buffer = write(0,buffer);
-//    var chars = c.loadCharacters(serverId);
-//    buffer = write(chars.length, buffer);
-    buffer = write(0, buffer);
+    var chars = c.loadCharacters(serverId);
+    buffer = write(chars.length, buffer);
+
+    // for commented chars.length
+//    buffer = write(0, buffer);
+
     var chr;
 //    for (var i = 0; i<chars.length; i++) {
 //        chr = chars[i];
