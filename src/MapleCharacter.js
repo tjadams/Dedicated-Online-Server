@@ -42,11 +42,12 @@ MapleCharacter.loadCharFromDB = function(charid, client, channelserver){
     ret.client = client;
     ret.id = charid;
 
-    q.nfcall(client.connection.query.bind(client.connection),"SELECT * FROM characters WHERE id = ?",[charid])
+ return q.nfcall(client.connection.query.bind(client.connection),"SELECT * FROM characters WHERE id = ?",[charid])
         .then(function (results) {
             rs = results;
-            if(results[0][0].length == 0){
-                // todo test
+         if((results[0][0] == null) || (results[0][0] == undefined) || (results[0]
+             [0].length == 0)){
+             // todo test
                 console.error("loading character failed, character not found");
                 return;
             }else{
@@ -116,13 +117,64 @@ MapleCharacter.loadCharFromDB = function(charid, client, channelserver){
 
 
                 // todo code setting accountid and whatever follows that
+
+
+
             }
+        }).then(function() {
+
+            // todo return generated keys like Statement.RETURN_GENERATED_KEYS
+            q.nfcall(client.connection.query.bind(client.connection), "SELECT name FROM accounts WHERE id = ?", [ret.accountid])
+                .then(function (results) {
+                    rs = results;
+
+                    if((results[0][0] == null) || (results[0][0] == undefined) || (results[0]
+                        [0].length == 0)){
+                        ret.client.setAccountName(rs[0][0].name);
+                    }
+                }).catch(function (error){
+                        console.error("error setting account name in MapleCharacter: "+error);
+                });
+
+        }).then(function(){
+
+            q.nfcall(client.connection.query.bind(client.connection), "SELECT `area`,`info` FROM area_info WHERE charid = ?", [ret.id])
+                .then(function (results) {
+                    rs = results;
+
+                    for(var i = 0; i < rs[0].length; i++){
+                        // todo check this area_info works
+                        ret.area_info.put(rs[0][i].("area"), rs[0][0].info);
+                    }
+
+                }).catch(function (error){
+                        console.error("error setting area_info in MapleCharacter: "+error);
+                });
+        }).then(function(){
+           //todo add event stats to character
+            // todo add cashshop
+            // todo add autoban
+            // todo add marriage
+
+             return q.nfcall(client.connection.query.bind(client.connection), "SELECT name, level FROM characters WHERE accountid = ? AND id != ? ORDER BY level DESC limit 1", [ret.accountid, charid])
+                 .then(function (results) {
+                     rs = results;
+                     if((results[0][0] == null) || (results[0][0] == undefined) || (results[0]
+                         [0].length == 0)){
+                         ret.linkedName = rs[0][0].name;
+                         ret.linkedLevel = rs[0][0].level;
+                     }
+                     return ret;
+
+                 }).catch(function (error){
+                     console.error("error setting area_info in MapleCharacter: "+error);
+                 });
+
+            // todo add more channelServer stuff to do with quests
+            // todo add more mountid maplemount stuff
         }).catch(function (error) {
             console.error("promise error: "+error);
         }).done();
-
-    return ret;
-
 };
 
 module.exports = MapleCharacter;
