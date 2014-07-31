@@ -3,7 +3,7 @@ var q = require('q');
 var MaplePacketCreator = require('./MaplePacketCreator');
 var MapleAESOFB = require('./MapleAESOFB');
 var CharNameAndId = require('./CharNameAndId.js');
-//var MapleCharacter = require('./MapleCharacter.js');
+var MapleCharacter = require('./MapleCharacter.js');
 
 exports.values = {
     // TODO add more opcodes for v83
@@ -152,7 +152,7 @@ var getLoginState = function(clientReference){
         .then(function (results) {
 
          if((results[0][0] == null) || (results[0][0] == undefined) || (results[0]
-             [0].size == 0)){
+             [0].length == 0)){
              console.log("rs loggedin doesn't exist");
          }else{
             // TODO add birthday stuff
