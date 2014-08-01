@@ -7,14 +7,31 @@ var SavedLocation = require('./SavedLocation.js');
 var SavedLocationType = require('./SavedLocationType.js');
 var MapleSkinColor = require('./MapleSkinColor.js');
 var MapleJob = require('./MapleJob.js');
+var MapleInventoryType = require('./MapleInventoryType.js');
+var MapleInventory = require('./MapleInventory.js');
 
 var MapleCharacter = function(){
     this.setStance(0);
 
-    // TODO code Inventory
+    // initialize an empty array of MapleInventory objcets of size 6
+    // todo test this next line
+    this.inventory = new MapleInventory[MapleInventoryType.values.length];
     this.savedLocations = new SavedLocation[SavedLocationType.values.length];
 
-    // Todo code Inventory
+    var type;
+    for( var i = 0; i < MapleInventoryType.values.length){
+        type = MapleInventoryType.values[i];
+        var b = 24;
+
+        if(type == MapleInventoryType.values.CASH){
+            b = 96;
+        }
+
+        // todo check
+        // I think type.ordinal() means position in the array
+        this.inventory[i] = new MapleInventory(type, b);
+
+    }
 
     for (var i = 0; i < SavedLocationType.values.length; i++) {
         this.savedLocations[i] = null;
@@ -22,7 +39,17 @@ var MapleCharacter = function(){
 
     // TODO code quests
     this.setPosition(0, 0);
+};
 
+MapleCharacter.prototype.getInventory = function(type){
+    for( var i = 0; i < MapleInventoryType.values.length){
+        if(type == MapleInventoryType.values[i]){
+            // todo check
+            return this.inventory[i];
+        }
+    }
+    console.error("error returning inventory");
+    return null;
 };
 
 MapleCharacter.prototype.setPosition = function(x,y){

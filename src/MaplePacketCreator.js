@@ -4,6 +4,8 @@
 
 var SendOpcode = require('./SendOpcode.js');
 var ServerConstants = require('./ServerConstants.js');
+var MapleInventoryType = require('./MapleInventoryType.js');
+var MapleInventory = require('./MapleInventory.js');
 
 
 // NOTE: buffer.write() was giving me incorrect values. Buffer.concat() works better.
@@ -243,10 +245,21 @@ function addCharLook(buffer, chr, mega){
     return buffer;
 };
 
-//function addCharEquips(buffer, chr){
-//
-//    return buffer;
-//};
+
+
+function addCharEquips(buffer, chr){
+    var equip = chr.getInventory(MapleInventoryType.values.EQUIPPED);
+
+    for (var i = 0; i < 3; i++) {
+        // todo add pets
+//        if (chr.getPet(i) != null) {
+//            mplew.writeInt(chr.getPet(i).getItemId());
+//        } else {
+            buffer = writeInt(0, buffer);
+//        }
+    }
+    return buffer;
+};
 
 function writeBool(b, buffer){
     buffer = write(b ? 1 : 0, buffer);
