@@ -183,47 +183,61 @@ function addCharEntry(buffer, chr, viewall){
 };
 
 function addCharStats(buffer, chr){
-    buffer = writeInt(chr.getId(), buffer); // character id
-    buffer = writeAsciiString(StringUtil.getRightPaddedStr(chr.getName(), '\0', 13), buffer);
-    buffer = write(chr.getGender(), buffer); // gender (0 = male, 1 = female)
-    buffer = write(chr.getSkinColor().getId(), buffer); // skin color
-    buffer = writeInt(chr.getFace(), buffer); // face
-    buffer = writeInt(chr.getHair(), buffer); // hair
+    buffer = writeInt(chr.id, buffer); // character id
+
+    var unicodeZeroesAtEndOfString = chr.name;
+    for(var i = 0; i < 13 - chr.name.length; i++){
+        unicodeZeroesAtEndOfString += "\\u0000";
+    }
+    // todo Test this, it's weird
+    buffer = writeAsciiString(unicodeZeroesAtEndOfString, buffer);
+    buffer = write(chr.gender, buffer); // gender (0 = male, 1 = female)
+    // todo Test this
+    buffer = write(chr.skinColor.getId(), buffer); // skin color
+    buffer = writeInt(chr.face, buffer); // face
+    buffer = writeInt(chr.hair, buffer); // hair
 
     for (var i = 0; i < 3; i++) {
         // todo add pets
-            buffer = writeLong(0, buffer);
-
+        buffer = writeLong(0, buffer);
     }
 
-    buffer = write(chr.getLevel(), buffer); // level
-    buffer = writeShort(chr.getJob().getId(), buffer); // job
-    buffer = writeShort(chr.getStr(), buffer); // str
-    buffer = writeShort(chr.getDex(), buffer); // dex
-    buffer = writeShort(chr.getInt(), buffer); // int
-    buffer = writeShort(chr.getLuk(), buffer); // luk
-    buffer = writeShort(chr.getHp(), buffer); // hp (?)
-    buffer = writeShort(chr.getMaxHp(), buffer); // maxhp
-    buffer = writeShort(chr.getMp(), buffer); // mp (?)
-    buffer = writeShort(chr.getMaxMp(), buffer); // maxmp
-    buffer = writeShort(chr.getRemainingAp(), buffer); // remaining ap
-    buffer = writeShort(chr.getRemainingSp(), buffer); // remaining sp
-    buffer = writeInt(chr.getExp(), buffer); // current exp
-    buffer = writeShort(chr.getFame(), buffer); // fame
-    buffer = writeInt(chr.getGachaExp(), buffer); //Gacha Exp
-    buffer = writeInt(chr.getMapId(), buffer); // current map id
-    buffer = write(chr.getInitialSpawnpoint(), buffer); // spawnpoint
+    buffer = write(chr.level, buffer); // level
+    // todo test this
+    buffer = writeShort(chr.job.getId(), buffer); // job
+    buffer = writeShort(chr.str, buffer); // str
+    buffer = writeShort(chr.dex, buffer); // dex
+    buffer = writeShort(chr.int_, buffer); // int
+    buffer = writeShort(chr.luk, buffer); // luk
+    buffer = writeShort(chr.hp, buffer); // hp (?)
+    buffer = writeShort(chr.maxhp, buffer); // maxhp
+    buffer = writeShort(chr.mp, buffer); // mp (?)
+    buffer = writeShort(chr.maxmp, buffer); // maxmp
+    buffer = writeShort(chr.remainingAp, buffer); // remaining ap
+    buffer = writeShort(chr.remainingSp, buffer); // remaining sp
+    buffer = writeInt(chr.exp, buffer); // current exp
+    buffer = writeShort(chr.fame, buffer); // fame
+    buffer = writeInt(chr.gachaexp, buffer); //Gacha Exp
+
+
+    if(chr.map != null){
+        chr.mapid = chr.map.getId();
+    }
+
+    buffer = writeInt(chr.mapid, buffer); // current map id
+    buffer = write(chr.initialSpawnPoint, buffer); // spawnpoint
     buffer = writeInt(0, buffer);
 
     return buffer;
 };
 
 function addCharLook(buffer, chr, mega){
-    buffer = write(chr.getGender(), buffer);
-    buffer = write(chr.getSkinColor().getId(), buffer); // skin color
-    buffer = writeInt(chr.getFace(), buffer); // face
+    buffer = write(chr.gender, buffer);
+    // todo test
+    buffer = write(chr.skinColor.getId(), buffer); // skin color
+    buffer = writeInt(chr.face, buffer); // face
     buffer = write(mega ? 0 : 1, buffer);
-    buffer = writeInt(chr.getHair(), buffer); // hair
+    buffer = writeInt(chr.hair, buffer); // hair
     buffer = addCharEquips(buffer, chr);
 
     return buffer;
