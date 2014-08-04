@@ -42,7 +42,7 @@ var MapleCharacter = function(){
 };
 
 MapleCharacter.prototype.getInventory = function(type){
-    for( var i = 0; i < MapleInventoryType.values.length){
+    for( var i = 0; i < MapleInventoryType.values.length; i++){
         if(type == MapleInventoryType.values[i]){
             // todo check
             return this.inventory[i];
@@ -137,13 +137,29 @@ MapleCharacter.loadCharFromDB = function(charid, client, channelserver){
                 // todo Code Guilds
 
                 // todo Code BuddyList
-              // todo Code Inventory
-              // todo code MapleInventoryType etc
-                 // todo Code ChannelServer MapleCharacter loading
-                // todo Code teleport rocks
 
 
-                // todo code setting accountid and whatever follows that
+             ret.getInventory(MapleInventoryType.values.EQUIP).setSlotLimit(rs[0][0].equipslots);
+             ret.getInventory(MapleInventoryType.values.USE).setSlotLimit(rs[0][0].useslots);
+             ret.getInventory(MapleInventoryType.values.SETUP).setSlotLimit(rs[0][0].setupslots);
+             ret.getInventory(MapleInventoryType.values.ETC).setSlotLimit(rs[0][0].etcslots);
+
+
+             // todo Load inventory items in this commented code block
+             /*
+             var loadedItems = ItemFactory.INVENTORY.loadItems(ret.id, !channelserver);
+             var item;
+             for (var i =0 ; loadedItems.length; i++) {
+                 item = loadedItems[i];
+
+                 // MapleInventory
+                 ret.getInventory(item.getRight()).addFromDB(item.getLeft());
+
+                 // todo add pet stuff
+                 // todo add MapleRing stuff
+             }
+               */
+
 
 
 
@@ -197,7 +213,14 @@ MapleCharacter.loadCharFromDB = function(charid, client, channelserver){
                      console.error("error setting area_info in MapleCharacter: "+error);
                  });
 
-            // todo add more channelServer stuff to do with quests
+         // todo Code ChannelServer MapleCharacter loading
+         // todo Code teleport rocks
+
+
+         // todo code setting accountid and whatever follows that
+
+
+         // todo add more channelServer stuff to do with quests
             // todo add more mountid maplemount stuff
         }).catch(function (error) {
             console.error("promise error: "+error);
