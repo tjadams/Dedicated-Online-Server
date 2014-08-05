@@ -6,6 +6,7 @@ var SendOpcode = require('./SendOpcode.js');
 var ServerConstants = require('./ServerConstants.js');
 var MapleInventoryType = require('./MapleInventoryType.js');
 var MapleInventory = require('./MapleInventory.js');
+var MapleItemInformationProvider = require('./MapleItemInformationProvider.js');
 
 
 // NOTE: buffer.write() was giving me incorrect values. Buffer.concat() works better.
@@ -141,27 +142,34 @@ var getServerStatus = function(status){
 
 var getCharList = function(c, serverId){
     var buffer = new Buffer(0);
-    buffer = writeShort(SendOpcode.opcodes.CHARLIST, buffer);
-    buffer = write(0,buffer);
-    var chars = c.loadCharacters(serverId);
-    buffer = write(chars.length, buffer);
 
-    // for commented chars.length
-//    buffer = write(0, buffer);
+    return c.loadCharacters(serverId)
+        .then(function(results){
+            buffer = writeShort(SendOpcode.opcodes.CHARLIST, buffer);
+            buffer = write(0,buffer);
+            var chars = results;
+            buffer = write(chars.length, buffer);
 
-    var chr;
-    for (var i = 0; i<chars.length; i++) {
-        chr = chars[i];
-        buffer = addCharEntry(buffer, chr, false);
-    }
-//    if (ServerConstants.ENABLE_PIC) {
-//        mplew.write(c.getPic() == null || c.getPic().length() == 0 ? 0 : 1);
-//    } else {
-        buffer = write(2, buffer);
-//    }
+                // for commented chars.length
+    //    buffer = write(0, buffer);
 
-    buffer = writeInt(c.characterSlots, buffer);
-    return buffer;
+            var chr;
+            for (var i = 0; i<chars.length; i++) {
+                chr = chars[i];
+                buffer = addCharEntry(buffer, chr, false);
+                }
+    //    if (ServerConstants.ENABLE_PIC) {
+    //        mplew.write(c.getPic() == null || c.getPic().length() == 0 ? 0 : 1);
+    //    } else {
+                buffer = write(2, buffer);
+    //    }
+
+            buffer = writeInt(c.characterSlots, buffer);
+            return buffer;
+
+        }).catch(function(error){
+            console.error("error in c.loadcharacters promise chain for addcharentry and all that stuff in MaplePacketCreator: "+error);
+        });
 
 };
 
@@ -247,8 +255,75 @@ function addCharLook(buffer, chr, mega){
 
 
 
+// todo check that these large arrays work without needing to use key-value pair
 function addCharEquips(buffer, chr){
+    //get what's currently equipped to the character?
     var equip = chr.getInventory(MapleInventoryType.values.EQUIPPED);
+
+    // todo Code getInstance new MapleItemInformationProvider later
+
+    // list of items
+    // TODO check if you can wear the equipment that you are already wearing...?
+//    var ii = MapleItemInformationProvider.getInstance().canWearEquipment(chr, equip.list());
+
+
+
+    var myEquip = [];
+    var maskedEquip = [];
+//    var myEquip = new Object();
+//    function getMyEquip(k){
+//        return myEquip[k];
+//    }
+//
+//    var maskedEquip = new Object();
+//    function getMaskedEquip(k){
+//        return maskedEquip[k];
+//    }
+
+    var item;
+    var equiplistItems = equip.list();
+
+    // todo These properties for item may not exist since there is no item class (item.id, item.position)
+    for (var i = 0; i < equiplistItems.length; i++) {
+        item = equiplistItems[i];
+        var pos = (item.position * -1);
+        if (pos < 100 && myEquip[pos] == null) {
+            myEquip[pos] =  item.id;
+        } else if (pos > 100 && pos != 111) {
+            pos -= 100;
+            if (myEquip[pos] != null) {
+                maskedEquip[pos] =  myEquip[pos];
+            }
+            myEquip[pos] =  item.id;
+        } else if (myEquip[pos] != null) {
+            maskedEquip[pos] = item.id;
+        }
+    }
+    for (var key in myEquip) {
+        buffer = write(key, buffer);
+        buffer = writeInt(myEquip[key], buffer);
+    }
+
+    buffer = write(0xFF, buffer);
+
+    for (var key in maskedEquip) {
+        buffer = write(key, buffer);
+        buffer = writeInt(maskedEquip[key], buffer);
+    }
+
+    buffer = write(0xFF, buffer);
+
+
+    // todo May be (-111 + 256)
+    // TODO Note: not really interested in an item class right now since
+    var cWeapon = equip.getItem(-111);
+
+    // todo Weapon showing won't work until I add an Item class and an ItemFactory
+   // buffer = writeInt(cWeapon != null ? cWeapon.getItemId() : 0, buffer);
+    // temporary replacement to the above line
+    buffer = writeInt(0, buffer);
+
+
 
     for (var i = 0; i < 3; i++) {
         // todo add pets
