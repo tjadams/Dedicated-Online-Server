@@ -19,7 +19,7 @@ var MapleCharacter = function(){
     this.savedLocations = new SavedLocation[SavedLocationType.values.length];
 
     var type;
-    for( var i = 0; i < MapleInventoryType.values.length){
+    for( var i = 0; i < MapleInventoryType.values.length; i++){
         type = MapleInventoryType.values[i];
         var b = 24;
 
@@ -39,6 +39,10 @@ var MapleCharacter = function(){
 
     // TODO code quests
     this.setPosition(0, 0);
+};
+
+MapleCharacter.prototype.getJob = function() {
+    return this.job;
 };
 
 MapleCharacter.prototype.getInventory = function(type){
@@ -187,7 +191,8 @@ MapleCharacter.loadCharFromDB = function(charid, client, channelserver){
 
                     for(var i = 0; i < rs[0].length; i++){
                         // todo check this area_info works
-                        ret.area_info.put(rs[0][i].("area"), rs[0][0].info);
+//                        ret.area_info.put(rs[0][i].area, rs[0][0].info);
+                        ret.area_info[rs[0][i].area] = rs[0][0].info;
                     }
 
                 }).catch(function (error){
@@ -223,8 +228,8 @@ MapleCharacter.loadCharFromDB = function(charid, client, channelserver){
          // todo add more channelServer stuff to do with quests
             // todo add more mountid maplemount stuff
         }).catch(function (error) {
-            console.error("promise error: "+error);
-        }).done();
+            console.error("error in loadCharFromDb promise chain in MapleCharacter: "+error);
+        });
 };
 
 module.exports = MapleCharacter;

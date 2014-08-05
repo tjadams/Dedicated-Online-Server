@@ -384,26 +384,58 @@ MapleClient.prototype.acceptToS = function(){
 };
 
 MapleClient.prototype.loadCharacters = function(serverId){
-    var chars = [15];
-    var clientsChars = this.loadCharactersInternal(serverId);
-    var cni;
-    for (var i = 0; i<clientsChars.length; i++) {
-        cni = clientsChars[i];
-        chars.add(MapleCharacter.loadCharFromDB(cni.id, this, false));
-    }
-    return chars;
+    // todo Don't worry about the size restriction for now
+    var chars =[];
+
+    // this line adds 15 to the array which is not what I want, I want a size restriction
+//    var chars = [15];
+
+
+    var clientreference = this;
+    return clientreference.loadCharactersInternal(serverId)
+        .then(function(results){
+            var clientsChars = results;
+            var cni;
+            for (var i = 0; i<clientsChars.length; i++) {
+                cni = clientsChars[i];
+
+               MapleCharacter.loadCharFromDB(cni.id, this, false)
+                    .then(function(results){
+                        chars.add(results);
+                    }).catch(function (error){
+                        console.log("error loadCharFromDB in loadCharactersInternal promise chain: "+error);
+                    });
+            }
+        }).then(function() {
+            return chars;
+        }).catch(function (error){
+            console.error("error loadingCharactersInternal in MapleClient: "+error);
+        });
+
 };
 
 MapleClient.prototype.loadCharactersInternal = function(serverId){
-    var chars = [15];
+    // todo Don't worry about the size restriction for now
+//    var chars = [15];
+    var chars = [];
     var clientReference = this;
 
     return q.nfcall(clientReference.connection.query.bind(clientReference.connection), "SELECT id, name FROM characters WHERE accountid = ? AND world = ?", [clientReference.accId, serverId])
         .then(function (rs){
-            for(var i = 0; i < rs[0].length; i++){
-                chars[i] = (new CharNameAndId(rs[0][i].name, rs[0][i].id));
+            if(!(rs == null || rs == undefined)) {
+                for (var i = 0; i < rs[0].length; i++) {
+                    if(rs[0][i].name !=null && rs[0][i].name != undefined
+                        && rs[0][i].id != null && rs[0][i].id != undefined) {
+                        chars[i] = (new CharNameAndId(rs[0][i].name, rs[0][i].id));
+                    }else{
+                        console.error("error loadCharactersInternal result names or ids are null or undefined");
+                    }
+                }
+                return chars;
+            }else{
+                console.error("error loadCharactersInternal results are null or undefined");
+                return null;
             }
-            return chars;
         }).catch(function (error){
             console.error('loadCharactersInternal error: '+error);
         });
@@ -411,7 +443,13 @@ MapleClient.prototype.loadCharactersInternal = function(serverId){
 
 
 MapleClient.prototype.sendCharList = function(world){
-    this.announce(MaplePacketCreator.getCharList(this, world));
+    var clientreference = this;
+    MaplePacketCreator.getCharList(this, world)
+        .then(function(results){
+            clientreference.announce(results);
+    }).catch(function (error){
+            console.error('error sendCharList promise chain: '+error);
+    }).done();
 };
 
 MapleClient.prototype.setDecoderState = function(decoderState){
