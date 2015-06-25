@@ -16,8 +16,13 @@ This server is for Version 83 of Global MapleStory, also known as v0.83.
 2. Run app.js ("node app.js" in command line, will change the name later on)
 3. Run "MapleStory.exe"
 
+## To do list ##
+- Clean code
+- Add character creation
+- Add a game server
+
 ##Contact##
-If you have any questions or comments, you can e-mail me, Tyler Adams, at daretyleradams@gmail.com
+If you have any questions or comments, you can e-mail me, Tyler Adams, at tjadams@uwaterloo.ca
 
 ###Disclaimer 
 
